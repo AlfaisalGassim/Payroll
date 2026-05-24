@@ -581,6 +581,7 @@ const i18n = {
     msg_formula_empty:'Formula cannot be empty', msg_invalid_formula:'Invalid formula: ',
     msg_ot_saved:'OT settings saved!', msg_cats_saved:'Categories saved!',
     msg_cat_name_required:'All categories must have a name',
+    msg_cat_rate_required:'Rate must be greater than 0 for: ',
     msg_name_required:'Name is required',
     modal_add_emp:'Add Employee', modal_edit_emp:'Edit Employee',
     lbl_edit_ot:'Edit OT Formula',
@@ -667,6 +668,7 @@ const i18n = {
     msg_formula_empty:'لا يمكن أن تكون المعادلة فارغة', msg_invalid_formula:'معادلة غير صالحة: ',
     msg_ot_saved:'تم حفظ إعدادات الإضافي!', msg_cats_saved:'تم حفظ الفئات!',
     msg_cat_name_required:'يجب إدخال اسم لكل فئة',
+    msg_cat_rate_required:'يجب أن يكون المعدل أكبر من صفر للفئة: ',
     msg_name_required:'الاسم مطلوب',
     modal_add_emp:'إضافة موظف', modal_edit_emp:'تعديل الموظف',
     lbl_edit_ot:'تعديل معادلة الإضافي',
@@ -849,10 +851,10 @@ function openEmpModal(id=null) {
   document.getElementById('f-status').value='active';
   const catBox=document.getElementById('f-comm-cats');
   if(!commissionCategories.length){
-    catBox.innerHTML=`<div style="font-size:12px;color:var(--text2);padding:8px;background:var(--navy);border-radius:6px;">${t('lbl_no_commission')}</div>`;
+    catBox.innerHTML=`<div style="font-size:12px;color:var(--text2);padding:8px;background:var(--bg3);border-radius:6px;">${t('lbl_no_commission')}</div>`;
   } else {
     catBox.innerHTML=commissionCategories.map(c=>`
-      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--navy);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">
         <input type="checkbox" id="fcat-${c.id}" style="accent-color:var(--accent);width:15px;height:15px;flex-shrink:0;">
         <span style="flex:1;">${c.name}</span>
         <span style="font-size:11px;color:var(--text2);font-family:var(--mono);direction:ltr;">${c.rateType==='percent'?c.rate+'%':c.rate+' SAR'}/unit</span>
@@ -1186,6 +1188,17 @@ function saveCommission(){
     });
     commissionRecords[month][e.id]=empRec;
   });
+  // Sync commission into any existing pending payroll records for this month
+  if(payrollRecords[month]){
+    employees.filter(e=>e.status==='active').forEach(e=>{
+      const rec=payrollRecords[month][e.id];
+      if(!rec||rec.status==='paid') return;
+      const {total:commPay,breakdown:commBreakdown}=calcCommission(e,month);
+      const gross=Number(e.salary||0)+(rec.allowances||0)+(rec.otPay||0)+commPay;
+      const net=gross-(rec.totalDed||0);
+      payrollRecords[month][e.id]={...rec,commPay,commBreakdown,gross,net};
+    });
+  }
   saveData(); alert(t('msg_save_comm'));
 }
 
@@ -1349,7 +1362,9 @@ function saveCatSettings(){
   for(const c of commissionCategories){
     const name=(document.getElementById('cat-name-'+c.id)?.value||'').trim();
     if(!name){alert(t('msg_cat_name_required'));return;}
-    updated.push({id:c.id,name,rateType:document.getElementById('cat-type-'+c.id)?.value||'percent',rate:parseFloat(document.getElementById('cat-rate-'+c.id)?.value)||0});
+    const rate=parseFloat(document.getElementById('cat-rate-'+c.id)?.value)||0;
+    if(!rate){alert(t('msg_cat_rate_required')||'Rate must be greater than 0 for: '+name);return;}
+    updated.push({id:c.id,name,rateType:document.getElementById('cat-type-'+c.id)?.value||'percent',rate});
   }
   commissionCategories=updated; saveData(); closeCatSettings(); alert(t('msg_cats_saved'));
 }
