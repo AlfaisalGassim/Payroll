@@ -859,6 +859,7 @@ function openEmpModal(id=null) {
         <span style="flex:1;">${c.name}</span>
         <span style="font-size:11px;color:var(--text2);font-family:var(--mono);direction:ltr;">${c.rateType==='percent'?c.rate+'%':c.rate+' SAR'}/unit</span>
       </label>`).join('');
+    commissionCategories.forEach(c=>{const cb=document.getElementById('fcat-'+c.id);if(cb)cb.checked=false;});
   }
   if(id){
     const e=employees.find(x=>x.id===id);
