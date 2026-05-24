@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PayrollPro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing:border-box;margin:0;padding:0; }
+  :root {
+    --bg:#f7f8fa;--bg2:#ffffff;--bg3:#f0f2f5;
+    --accent:#2563EB;--accent-light:#EEF3FF;--accent-hover:#1d4ed8;
+    --text:#111827;--text2:#6b7280;--text3:#9ca3af;
+    --border:#e5e7eb;--border2:#d1d5db;
+    --green:#059669;--green-light:#ecfdf5;--green-dark:#047857;
+    --red:#dc2626;--red-light:#fef2f2;
+    --amber:#d97706;--amber-light:#fffbeb;
+    --teal:#0891b2;--teal-light:#ecfeff;
+    --shadow:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md:0 4px 12px rgba(0,0,0,0.07),0 2px 4px rgba(0,0,0,0.04);
+    --radius:8px;--radius-lg:12px;
+    --font:'Inter',sans-serif;--mono:'DM Mono',monospace;
+  }
+  html[lang="ar"] { --font:'Tajawal',sans-serif; }
+  body { background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh;-webkit-font-smoothing:antialiased; }
+  html[lang="ar"] body { font-size:15px; }
+
+  /* ── Layout ── */
+  .app { display:flex;height:100vh;overflow:hidden; }
+  .sidebar { width:232px;min-width:232px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column; }
+  html[lang="ar"] .sidebar { border-right:none;border-left:1px solid var(--border); }
+  .main { flex:1;overflow-y:auto;background:var(--bg); }
+  .page { display:none;padding:32px 36px;max-width:1280px; }
+  .page.active { display:block; }
+
+  /* ── Sidebar ── */
+  .logo { padding:22px 20px 18px;border-bottom:1px solid var(--border); }
+  .logo h1 { font-size:17px;font-weight:600;color:var(--text);letter-spacing:-0.4px; }
+  .logo span { font-size:11px;color:var(--accent);font-weight:500;letter-spacing:0.3px;text-transform:uppercase; }
+  .nav { padding:14px 10px;flex:1;overflow-y:auto; }
+  .nav-section { font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;padding:12px 10px 5px;font-weight:500; }
+  .nav-item { display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius);cursor:pointer;color:var(--text2);font-size:13px;font-weight:400;transition:all 0.12s;margin-bottom:1px; }
+  .nav-item:hover { background:var(--bg3);color:var(--text); }
+  .nav-item.active { background:var(--accent-light);color:var(--accent);font-weight:500; }
+  .nav-item svg { flex-shrink:0;opacity:0.7; }
+  .nav-item.active svg { opacity:1; }
+  .sidebar-footer { padding:14px;border-top:1px solid var(--border); }
+  .lang-btn { width:100%;margin-bottom:10px;padding:7px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:12px;cursor:pointer;font-family:var(--font);font-weight:500;transition:all 0.12s; }
+  .lang-btn:hover { border-color:var(--accent);color:var(--accent);background:var(--accent-light); }
+  .data-btns { display:flex;gap:6px; }
+  .data-btn { flex:1;padding:7px;border-radius:var(--radius);border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;cursor:pointer;text-align:center;transition:all 0.12s;font-family:var(--font); }
+  .data-btn:hover { border-color:var(--accent);color:var(--accent);background:var(--accent-light); }
+
+  /* ── Page header ── */
+  .page-header { margin-bottom:28px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px; }
+  .page-header h2 { font-size:20px;font-weight:600;color:var(--text);letter-spacing:-0.3px; }
+  .page-header p { font-size:13px;color:var(--text2);margin-top:3px; }
+
+  /* ── Buttons ── */
+  .btn { padding:8px 16px;border-radius:var(--radius);border:none;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.12s;display:inline-flex;align-items:center;gap:6px;font-family:var(--font);letter-spacing:-0.1px; }
+  .btn-primary { background:var(--accent);color:#fff;box-shadow:0 1px 2px rgba(37,99,235,0.25); }
+  .btn-primary:hover { background:var(--accent-hover); }
+  .btn-secondary { background:var(--bg2);color:var(--text);border:1px solid var(--border2); }
+  .btn-secondary:hover { background:var(--bg3);border-color:var(--border2); }
+  .btn-danger { background:transparent;color:var(--red);border:1px solid #fca5a5; }
+  .btn-danger:hover { background:var(--red-light); }
+  .btn-sm { padding:5px 11px;font-size:12px;border-radius:6px; }
+
+  /* ── Stat cards ── */
+  .stats-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:28px; }
+  .stat-card { background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 22px;box-shadow:var(--shadow); }
+  .stat-label { font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;font-weight:500; }
+  .stat-value { font-size:28px;font-weight:600;color:var(--text);letter-spacing:-0.8px;line-height:1; }
+  .stat-sub { font-size:12px;color:var(--text3);margin-top:6px; }
+  .stat-accent { color:var(--accent); }
+
+  /* ── Cards ── */
+  .card { background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow); }
+  .card-header { padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap; }
+  .card-header h3 { font-size:14px;font-weight:600;color:var(--text); }
+  .card-body { padding:20px; }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x:auto; }
+  table { width:100%;border-collapse:collapse;font-size:13px; }
+  thead th { text-align:start;padding:10px 16px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg3); }
+  tbody td { padding:13px 16px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle; }
+  tbody tr:hover td { background:#f9fafb; }
+  tbody tr:last-child td { border-bottom:none; }
+
+  /* ── Badges ── */
+  .badge { display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;letter-spacing:0.1px; }
+  .badge-active { background:#dcfce7;color:#15803d; }
+  .badge-inactive { background:#fee2e2;color:#b91c1c; }
+  .badge-paid { background:#dcfce7;color:#15803d; }
+  .badge-pending { background:#fef9c3;color:#a16207; }
+  .badge-comm { background:#dbeafe;color:#1e40af; }
+
+  /* ── Search ── */
+  .search-bar { position:relative; }
+  .search-bar input { background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:8px 12px 8px 36px;font-size:13px;width:240px;outline:none;transition:border-color 0.12s;font-family:var(--font); }
+  html[lang="ar"] .search-bar input { padding:8px 36px 8px 12px; }
+  .search-bar input:focus { border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+  .search-bar svg { position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3); }
+  html[lang="ar"] .search-bar svg { left:auto;right:10px; }
+
+  /* ── Forms ── */
+  .form-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
+  .form-group { display:flex;flex-direction:column;gap:5px; }
+  .form-group label { font-size:12px;font-weight:500;color:var(--text2);letter-spacing:0.2px; }
+  html[lang="ar"] .form-group label { letter-spacing:0; }
+  .form-group input,.form-group select,.form-group textarea { background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:13px;font-family:var(--font);outline:none;transition:all 0.12s; }
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus { border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+  .form-group select option { background:var(--bg2); }
+  .form-full { grid-column:1/-1; }
+
+  /* ── Modals ── */
+  .modal-overlay { position:fixed;inset:0;background:rgba(15,23,42,0.4);backdrop-filter:blur(2px);z-index:100;display:none;align-items:center;justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);width:580px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md); }
+  .modal-header { padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center; }
+  .modal-header h3 { font-size:16px;font-weight:600;color:var(--text); }
+  .modal-close { background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;padding:4px 6px;border-radius:6px;transition:all 0.12s; }
+  .modal-close:hover { color:var(--text);background:var(--bg3); }
+  .modal-body { padding:24px; }
+  .modal-footer { padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;background:var(--bg3);border-radius:0 0 var(--radius-lg) var(--radius-lg); }
+
+  /* ── Payslip ── */
+  .payslip { background:#fff;color:#111;border-radius:10px;padding:36px;max-width:640px;margin:0 auto;border:1px solid #e5e7eb; }
+  html[lang="ar"] .payslip { font-family:'Tajawal',sans-serif; }
+  html[lang="en"] .payslip { font-family:'DM Mono',monospace; }
+  .payslip-header { border-bottom:1.5px solid #e5e7eb;padding-bottom:16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start; }
+  .payslip-company { font-size:18px;font-weight:700;color:#111;letter-spacing:-0.3px; }
+  .payslip-title { font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;margin-top:3px; }
+  .payslip-period { text-align:end;font-size:12px;color:#6b7280; }
+  .payslip-employee { background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px; }
+  .payslip-section { margin-bottom:16px; }
+  .payslip-section h4 { font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:#9ca3af;margin-bottom:10px;font-weight:600; }
+  html[lang="ar"] .payslip-section h4 { letter-spacing:0; }
+  .payslip-row { display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:13px;color:#374151; }
+  .payslip-total { display:flex;justify-content:space-between;padding:12px 0 0;font-size:15px;font-weight:600;color:#111;border-top:1.5px solid #111;margin-top:4px; }
+  .payslip-net { background:#111;color:#fff;border-radius:8px;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;margin-top:16px; }
+  .payslip-net-label { font-size:11px;text-transform:uppercase;letter-spacing:0.8px;opacity:0.7; }
+  html[lang="ar"] .payslip-net-label { letter-spacing:0; }
+  .payslip-net-value { font-size:22px;font-weight:700; }
+
+  /* ── Charts / bars ── */
+  .bar-wrap { display:flex;flex-direction:column;gap:10px; }
+  .bar-item { display:flex;align-items:center;gap:12px;font-size:12px; }
+  .bar-label { width:130px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px; }
+  .bar-track { flex:1;height:5px;background:var(--bg3);border-radius:99px;overflow:hidden; }
+  .bar-fill { height:100%;background:var(--accent);border-radius:99px;transition:width 0.5s ease; }
+  .bar-val { width:75px;text-align:end;font-family:var(--mono);font-size:12px;color:var(--text); }
+
+  /* ── Misc ── */
+  .empty { text-align:center;padding:52px 20px;color:var(--text3); }
+  .select-sm { background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:7px 10px;font-size:13px;outline:none;cursor:pointer;font-family:var(--font);transition:border-color 0.12s; }
+  .select-sm:focus { border-color:var(--accent); }
+  .payroll-summary { background:var(--bg3);border-top:1px solid var(--border);border-radius:0 0 var(--radius-lg) var(--radius-lg);padding:18px 20px;display:flex;gap:28px;flex-wrap:wrap; }
+  .ps-item { display:flex;flex-direction:column;gap:3px; }
+  .ps-label { font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;font-weight:500; }
+  html[lang="ar"] .ps-label { letter-spacing:0; }
+  .ps-val { font-size:17px;font-weight:600;color:var(--text); }
+  .ps-val.green { color:var(--green); }
+  .ps-val.red { color:var(--red); }
+  .ps-val.amber { color:var(--amber); }
+  .month-selector { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+
+  /* ── OT formula ── */
+  .ot-formula-box { background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px; }
+  .formula-input { width:100%;background:var(--bg2);border:1.5px solid var(--accent);color:var(--accent);border-radius:var(--radius);padding:10px 14px;font-size:14px;font-family:var(--mono);outline:none;direction:ltr;transition:box-shadow 0.12s; }
+  .formula-input:focus { box-shadow:0 0 0 3px rgba(37,99,235,0.12); }
+  .formula-preview { background:var(--green-light);border:1px solid #a7f3d0;border-radius:var(--radius);padding:12px 14px;margin-top:12px;font-size:13px;color:var(--green-dark); }
+  .formula-preview span { color:var(--green-dark);font-family:var(--mono);font-size:14px;font-weight:600; }
+  .ot-var-pills { display:flex;flex-wrap:wrap;gap:6px;margin-top:10px; }
+  .ot-var-pill { background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;font-size:11px;font-family:var(--mono);color:var(--text2);cursor:pointer;transition:all 0.12s;direction:ltr; }
+  .ot-var-pill:hover { border-color:var(--accent);color:var(--accent);background:var(--accent-light); }
+
+  /* ── Attendance inputs ── */
+  .inp { background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:6px;padding:6px 9px;font-size:12px;outline:none;width:100%;font-family:var(--font);transition:border-color 0.12s; }
+  .inp:focus { border-color:var(--accent);box-shadow:0 0 0 2px rgba(37,99,235,0.1); }
+  .inp-green { border-color:#a7f3d0;color:var(--green); }
+  .inp-green:focus { border-color:var(--green); }
+  .inp-amber { border-color:#fcd34d;color:var(--amber); }
+  .inp-amber:focus { border-color:var(--amber); }
+  .inp-red { border-color:#fca5a5;color:var(--red); }
+  .inp-red:focus { border-color:var(--red); }
+  .att-card { background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow); }
+  .field-label { font-size:11px;margin-bottom:4px;color:var(--text2);font-weight:500; }
+  .field-label.green { color:var(--green); }
+  .field-label.amber { color:var(--amber); }
+  .field-label.red { color:var(--red); }
+  .cat-row { display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius); }
+
+  @media print {
+    .sidebar,.page-header,nav,.modal-overlay,.payroll-summary { display:none!important; }
+    .app { display:block; }
+    .main { overflow:visible; }
+    .page { display:block!important;padding:0; }
+    #page-dashboard,#page-employees,#page-payroll,#page-attendance,#page-commission,#page-reports { display:none!important; }
+    #page-payslips { display:block!important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="logo"><h1>PayrollPro</h1><span id="logo-sub">HR Management</span></div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="navigate('dashboard')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span data-i18n="nav_dashboard">Dashboard</span>
+      </div>
+      <div class="nav-item" onclick="navigate('employees')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+        <span data-i18n="nav_employees">Employees</span>
+      </div>
+      <div class="nav-item" onclick="navigate('payroll')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        <span data-i18n="nav_payroll">Payroll</span>
+      </div>
+      <div class="nav-item" onclick="navigate('attendance')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span data-i18n="nav_attendance">Attendance</span>
+      </div>
+      <div class="nav-item" onclick="navigate('commission')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <span data-i18n="nav_commission">Commission</span>
+      </div>
+      <div class="nav-item" onclick="navigate('payslips')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span data-i18n="nav_payslips">Payslips</span>
+      </div>
+      <div class="nav-item" onclick="navigate('reports')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span data-i18n="nav_reports">Reports</span>
+      </div>
+      <div class="nav-section" data-i18n="nav_settings">Settings</div>
+      <div class="nav-item" onclick="openOtSettings()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span data-i18n="nav_ot_formula">OT Formula</span>
+      </div>
+      <div class="nav-item" onclick="openCatSettings()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        <span data-i18n="nav_comm_cats">Comm. Categories</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="lang-btn" onclick="toggleLang()" id="lang-btn">العربية</button>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px;" data-i18n="label_data">Data</div>
+      <div class="data-btns">
+        <button class="data-btn" onclick="exportData()" data-i18n="btn_export">Export</button>
+        <label class="data-btn" style="cursor:pointer;"><span data-i18n="btn_import">Import</span><input type="file" accept=".json" style="display:none" onchange="importData(event)"></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div><h2 data-i18n="nav_dashboard">Dashboard</h2><p data-i18n="desc_dashboard">Overview of your workforce &amp; payroll</p></div>
+        <div id="dash-date" style="font-size:12px;color:var(--text2);"></div>
+      </div>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="card">
+          <div class="card-header"><h3 data-i18n="dash_recent_emp">Recent Employees</h3><span class="btn btn-secondary btn-sm" onclick="navigate('employees')" style="cursor:pointer;" data-i18n="btn_view_all">View all</span></div>
+          <div class="card-body" id="dash-recent"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 data-i18n="dash_payroll_dept">Payroll by Department</h3></div>
+          <div class="card-body" id="dash-dept"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMPLOYEES -->
+    <div class="page" id="page-employees">
+      <div class="page-header">
+        <div><h2 data-i18n="nav_employees">Employees</h2><p id="emp-count-label"></p></div>
+        <button class="btn btn-primary" onclick="openEmpModal()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span data-i18n="btn_add_employee">Add Employee</span>
+        </button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="search-bar">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="emp-search" oninput="renderEmployees()">
+          </div>
+          <select class="select-sm" id="emp-dept-filter" onchange="renderEmployees()"><option value=""></option></select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr id="emp-thead"></tr></thead>
+            <tbody id="emp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAYROLL -->
+    <div class="page" id="page-payroll">
+      <div class="page-header">
+        <div><h2 data-i18n="nav_payroll">Payroll</h2><p data-i18n="desc_payroll">Process monthly payroll for all active employees</p></div>
+        <div class="month-selector">
+          <select class="select-sm" id="payroll-month-m" onchange="renderPayroll()"></select>
+          <select class="select-sm" id="payroll-month-y" onchange="renderPayroll()"></select>
+          <button class="btn btn-secondary" id="btn-regen" onclick="processPayroll(true)" style="display:none;">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span data-i18n="btn_regenerate">Regenerate</span>
+          </button>
+          <button class="btn btn-primary" id="btn-process" onclick="processPayroll(false)"><span data-i18n="btn_process_payroll">Process Payroll</span></button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3 data-i18n="payroll_register">Payroll Register</h3>
+          <select class="select-sm" id="payroll-status-filter" onchange="renderPayroll()"></select>
+        </div>
+        <div class="table-wrap"><table><thead><tr id="payroll-thead"></tr></thead><tbody id="payroll-tbody"></tbody></table></div>
+        <div class="payroll-summary" id="payroll-summary"></div>
+      </div>
+    </div>
+
+    <!-- ATTENDANCE -->
+    <div class="page" id="page-attendance">
+      <div class="page-header">
+        <div><h2 data-i18n="nav_attendance">Attendance</h2><p data-i18n="desc_attendance">Track days worked and apply deductions per employee</p></div>
+        <div class="month-selector">
+          <select class="select-sm" id="att-month-m" onchange="renderAttendance()"></select>
+          <select class="select-sm" id="att-month-y" onchange="renderAttendance()"></select>
+          <button class="btn btn-primary" onclick="saveAttendance()"><span data-i18n="btn_save_attendance">Save Attendance</span></button>
+        </div>
+      </div>
+      <div id="att-grid-wrap"></div>
+    </div>
+
+    <!-- COMMISSION -->
+    <div class="page" id="page-commission">
+      <div class="page-header">
+        <div><h2 data-i18n="nav_commission">Commission</h2><p data-i18n="desc_commission">Enter monthly sales per employee and category</p></div>
+        <div class="month-selector">
+          <select class="select-sm" id="comm-month-m" onchange="renderCommission()"></select>
+          <select class="select-sm" id="comm-month-y" onchange="renderCommission()"></select>
+          <button class="btn btn-primary" onclick="saveCommission()"><span data-i18n="btn_save_commission">Save Commission</span></button>
+        </div>
+      </div>
+      <div id="comm-wrap"></div>
+    </div>
+
+    <!-- PAYSLIPS -->
+    <div class="page" id="page-payslips">
+      <div class="page-header">
+        <div><h2 data-i18n="nav_payslips">Payslips</h2><p data-i18n="desc_payslips">Generate and print employee payslips</p></div>
+        <div class="month-selector">
+          <select class="select-sm" id="slip-month-m"></select>
+          <select class="select-sm" id="slip-month-y"></select>
+          <button class="btn btn-secondary" onclick="renderPayslipList()"><span data-i18n="btn_load">Load</span></button>
+        </div>
+      </div>
+      <div id="payslip-area"></div>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="page" id="page-reports">
+      <div class="page-header">
+        <div><h2 data-i18n="nav_reports">Reports</h2><p data-i18n="desc_reports">Payroll history and salary analytics</p></div>
+        <div class="month-selector">
+          <select class="select-sm" id="report-year" onchange="renderReports()"></select>
+        </div>
+      </div>
+      <div id="reports-area"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Employee Modal -->
+<div class="modal-overlay" id="emp-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="emp-modal-title"></h3>
+      <button class="modal-close" onclick="closeEmpModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label data-i18n="field_name">Full Name</label><input type="text" id="f-name"></div>
+        <div class="form-group"><label data-i18n="field_emp_id">Employee ID</label><input type="text" id="f-id"></div>
+        <div class="form-group"><label data-i18n="field_dept">Department</label><input type="text" id="f-dept" list="dept-list"><datalist id="dept-list"></datalist></div>
+        <div class="form-group"><label data-i18n="field_position">Position</label><input type="text" id="f-pos"></div>
+        <div class="form-group"><label data-i18n="field_base_salary">Base Salary (SAR)</label><input type="number" id="f-salary"></div>
+        <div class="form-group"><label data-i18n="field_housing">Housing Allowance (SAR)</label><input type="number" id="f-housing"></div>
+        <div class="form-group"><label data-i18n="field_transport">Transport Allowance (SAR)</label><input type="number" id="f-transport"></div>
+        <div class="form-group"><label data-i18n="field_other_allow">Other Allowance (SAR)</label><input type="number" id="f-other"></div>
+        <div class="form-group"><label data-i18n="field_gosi_emp">GOSI Employee %</label><input type="number" id="f-gosi-emp" step="0.01"></div>
+        <div class="form-group"><label data-i18n="field_gosi_er">GOSI Employer %</label><input type="number" id="f-gosi-er" step="0.01"></div>
+        <div class="form-group"><label data-i18n="field_join_date">Join Date</label><input type="date" id="f-join"></div>
+        <div class="form-group"><label data-i18n="field_status">Status</label>
+          <select id="f-status"><option value="active" data-i18n="status_active">Active</option><option value="inactive" data-i18n="status_inactive">Inactive</option></select>
+        </div>
+        <div class="form-group form-full" style="border-top:1px solid var(--border);padding-top:14px;">
+          <label style="color:var(--accent);font-weight:600;" data-i18n="field_commission">Commission</label>
+        </div>
+        <div class="form-group form-full">
+          <label data-i18n="field_comm_cats">Commission Categories</label>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px;" data-i18n="field_comm_cats_hint">Select which categories this employee earns commission from.</div>
+          <div id="f-comm-cats" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;"></div>
+        </div>
+        <div class="form-group form-full"><label data-i18n="field_notes">Notes</label><textarea id="f-notes" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeEmpModal()" data-i18n="btn_cancel">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEmployee()" data-i18n="btn_save">Save Employee</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payslip Modal -->
+<div class="modal-overlay" id="slip-modal">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-header">
+      <h3 data-i18n="nav_payslips">Payslip</h3>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="window.print()" data-i18n="btn_print">Print</button>
+        <button class="modal-close" onclick="document.getElementById('slip-modal').classList.remove('open')">&times;</button>
+      </div>
+    </div>
+    <div class="modal-body" id="slip-modal-body"></div>
+  </div>
+</div>
+
+<!-- OT Settings Modal -->
+<div class="modal-overlay" id="ot-modal">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-header">
+      <h3 data-i18n="nav_ot_formula">OT Formula</h3>
+      <button class="modal-close" onclick="closeOtSettings()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;" data-i18n="ot_desc">Define the formula used to calculate overtime pay. Must return the total OT amount in SAR.</div>
+      <div class="ot-formula-box">
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;" data-i18n="ot_vars">Available Variables</div>
+        <div class="ot-var-pills">
+          <span class="ot-var-pill" onclick="insertVar('baseSalary')">baseSalary</span>
+          <span class="ot-var-pill" onclick="insertVar('hourlyRate')">hourlyRate</span>
+          <span class="ot-var-pill" onclick="insertVar('dailyRate')">dailyRate</span>
+          <span class="ot-var-pill" onclick="insertVar('otHours')">otHours</span>
+          <span class="ot-var-pill" onclick="insertVar('workDays')">workDays</span>
+          <span class="ot-var-pill" onclick="insertVar('otMultiplier')">otMultiplier</span>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label data-i18n="ot_multiplier">OT Rate Multiplier</label>
+        <input type="number" id="ot-multiplier" value="1.5" step="0.1" min="1" max="5" style="width:140px;" oninput="previewFormula()">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label data-i18n="ot_formula_label">OT Formula</label>
+        <input type="text" id="ot-formula" class="formula-input" oninput="previewFormula()">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button class="btn btn-secondary btn-sm" onclick="setPreset('hourlyRate * otHours * otMultiplier')">Hourly × hrs × mult</button>
+        <button class="btn btn-secondary btn-sm" onclick="setPreset('(baseSalary / (workDays * 8)) * otHours * otMultiplier')">Full hourly</button>
+        <button class="btn btn-secondary btn-sm" onclick="setPreset('(baseSalary / 240) * otHours * otMultiplier')">Base/240 × OT</button>
+      </div>
+      <div class="formula-preview" id="ot-preview"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeOtSettings()" data-i18n="btn_cancel">Cancel</button>
+      <button class="btn btn-primary" onclick="saveOtSettings()" data-i18n="btn_save_settings">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Commission Categories Modal -->
+<div class="modal-overlay" id="cat-modal">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-header">
+      <h3 data-i18n="nav_comm_cats">Commission Categories</h3>
+      <button class="modal-close" onclick="closeCatSettings()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px;" data-i18n="cats_desc">Define categories employees earn commission from. Each has a rate type — percentage of the sales value, or fixed SAR per unit.</div>
+      <div id="cat-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+      <button class="btn btn-secondary" style="width:100%;justify-content:center;" onclick="addCatRow()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span data-i18n="btn_add_category">Add Category</span>
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeCatSettings()" data-i18n="btn_cancel">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCatSettings()" data-i18n="btn_save_settings">Save Categories</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── i18n ───────────────────────────────────────────────
+const i18n = {
+  en: {
+    nav_dashboard:'Dashboard', nav_employees:'Employees', nav_payroll:'Payroll',
+    nav_attendance:'Attendance', nav_commission:'Commission', nav_payslips:'Payslips',
+    nav_reports:'Reports', nav_settings:'Settings', nav_ot_formula:'OT Formula',
+    nav_comm_cats:'Comm. Categories',
+    logo_sub:'HR Management',
+    desc_dashboard:'Overview of your workforce & payroll',
+    desc_payroll:'Process monthly payroll for all active employees',
+    desc_attendance:'Track days worked and apply deductions per employee',
+    desc_commission:'Enter monthly sales per employee and category',
+    desc_payslips:'Generate and print employee payslips',
+    desc_reports:'Payroll history and salary analytics',
+    dash_recent_emp:'Recent Employees', dash_payroll_dept:'Payroll by Department',
+    btn_view_all:'View all', btn_add_employee:'Add Employee', btn_export:'Export',
+    btn_import:'Import', btn_cancel:'Cancel', btn_save:'Save Employee',
+    btn_save_settings:'Save', btn_print:'Print', btn_load:'Load',
+    btn_process_payroll:'Process Payroll', btn_regenerate:'Regenerate',
+    btn_save_attendance:'Save Attendance', btn_save_commission:'Save Commission',
+    btn_add_category:'Add Category',
+    label_data:'Data',
+    payroll_register:'Payroll Register',
+    field_name:'Full Name', field_emp_id:'Employee ID', field_dept:'Department',
+    field_position:'Position', field_base_salary:'Base Salary (SAR)',
+    field_housing:'Housing Allowance (SAR)', field_transport:'Transport Allowance (SAR)',
+    field_other_allow:'Other Allowance (SAR)', field_gosi_emp:'GOSI Employee %',
+    field_gosi_er:'GOSI Employer %', field_join_date:'Join Date', field_status:'Status',
+    field_commission:'Commission', field_comm_cats:'Commission Categories',
+    field_comm_cats_hint:'Select which categories this employee earns commission from.',
+    field_notes:'Notes',
+    status_active:'Active', status_inactive:'Inactive',
+    ot_desc:'Define the formula used to calculate overtime pay. Must return the total OT amount in SAR.',
+    ot_vars:'Available Variables', ot_multiplier:'OT Rate Multiplier', ot_formula_label:'OT Formula',
+    cats_desc:'Define categories employees earn commission from. Each has a rate type — percentage of the sales value, or fixed SAR per unit.',
+    col_name:'Name', col_dept:'Department', col_position:'Position', col_base:'Base Salary',
+    col_commission:'Commission', col_status:'Status', col_actions:'Actions',
+    col_allowances:'Allowances', col_ot:'OT', col_deductions:'Deductions',
+    col_net:'Net Pay', col_gross:'Gross', col_paid:'Paid',
+    col_employees:'Employees', col_month:'Month', col_total_gross:'Total Gross',
+    col_total_deductions:'Total Deductions', col_total_net:'Total Net',
+    col_est_commission:'Est. Commission',
+    col_emp:'Employee',
+    lbl_employees:'Employees', lbl_base_salary:'Base Salary', lbl_total_gross:'Total Gross',
+    lbl_departments:'Departments', lbl_inactive:'inactive', lbl_on_commission:'on commission',
+    lbl_work_days:'Work Days', lbl_absent_days:'Absent Days', lbl_ot_hours:'OT Hours',
+    lbl_additions:'Additions (SAR)', lbl_extra_deductions:'Extra Deductions (SAR)',
+    lbl_ot:'Overtime', lbl_deductions:'Deductions', lbl_net_pay:'Net Pay',
+    lbl_total_deductions:'Total Deductions',
+    lbl_all:'All', lbl_pending:'Pending', lbl_paid:'Paid',
+    lbl_all_depts:'All Departments',
+    lbl_search:'Search employees...',
+    lbl_select_month:'Select a month',
+    lbl_no_records:'Select a month and click "Process Payroll"',
+    lbl_no_employees:'No employees found',
+    lbl_no_commission:'No commission categories defined.',
+    lbl_no_comm_employees:'No active employees have commission categories assigned.',
+    lbl_go_employees:'Go to Employees',
+    lbl_add_cats:'Add Categories',
+    lbl_process_first:'No payroll records for this month. Process payroll first.',
+    lbl_salary_statement:'Salary Statement',
+    lbl_generated:'Generated',
+    lbl_employee:'Employee', lbl_id:'ID', lbl_dept:'Department', lbl_position:'Position',
+    lbl_join_date:'Join Date', lbl_days_worked:'Days Worked',
+    lbl_earnings:'Earnings', lbl_base:'Base Salary', lbl_housing:'Housing Allowance',
+    lbl_transport:'Transport Allowance', lbl_other:'Other Allowance',
+    lbl_additional:'Additional Pay', lbl_overtime:'Overtime',
+    lbl_gross_earnings:'Gross Earnings',
+    lbl_absent:'Absent', lbl_other_ded:'Other Deductions',
+    lbl_emp_signature:'Employee Signature', lbl_hr_signature:'HR / Finance',
+    lbl_ytd_dept:'YTD Net Pay by Department', lbl_monthly_summary:'Monthly Summary',
+    lbl_comm_entry:'Commission Entry',
+    lbl_sales_or_units:'Enter sales value (SAR) or units per category',
+    lbl_pct_of_value:'% of value', lbl_sar_unit:'SAR / unit',
+    lbl_no_payroll_year:'No payroll records for this year',
+    msg_delete_emp:'Delete this employee?',
+    msg_save_att:'Attendance saved!', msg_save_comm:'Commission saved!',
+    msg_imported:'Imported successfully!', msg_invalid_file:'Invalid file',
+    msg_select_month:'Select a month', msg_no_employees:'No employees found',
+    msg_paid_warning:'Some employees are already paid. Regenerating keeps their paid status but recalculates amounts. Continue?',
+    msg_formula_empty:'Formula cannot be empty', msg_invalid_formula:'Invalid formula: ',
+    msg_ot_saved:'OT settings saved!', msg_cats_saved:'Categories saved!',
+    msg_cat_name_required:'All categories must have a name',
+    msg_name_required:'Name is required',
+    modal_add_emp:'Add Employee', modal_edit_emp:'Edit Employee',
+    lbl_edit_ot:'Edit OT Formula',
+  },
+  ar: {
+    nav_dashboard:'لوحة التحكم', nav_employees:'الموظفون', nav_payroll:'الرواتب',
+    nav_attendance:'الحضور', nav_commission:'العمولات', nav_payslips:'قسائم الراتب',
+    nav_reports:'التقارير', nav_settings:'الإعدادات', nav_ot_formula:'معادلة الإضافي',
+    nav_comm_cats:'فئات العمولة',
+    logo_sub:'إدارة الموارد البشرية',
+    desc_dashboard:'نظرة عامة على القوى العاملة والرواتب',
+    desc_payroll:'معالجة رواتب الموظفين النشطين شهرياً',
+    desc_attendance:'تتبع أيام العمل وتطبيق الخصومات',
+    desc_commission:'إدخال المبيعات الشهرية لكل موظف وفئة',
+    desc_payslips:'توليد وطباعة قسائم الراتب',
+    desc_reports:'سجل الرواتب والتحليلات',
+    dash_recent_emp:'أحدث الموظفين', dash_payroll_dept:'الرواتب حسب القسم',
+    btn_view_all:'عرض الكل', btn_add_employee:'إضافة موظف', btn_export:'تصدير',
+    btn_import:'استيراد', btn_cancel:'إلغاء', btn_save:'حفظ الموظف',
+    btn_save_settings:'حفظ', btn_print:'طباعة', btn_load:'تحميل',
+    btn_process_payroll:'معالجة الرواتب', btn_regenerate:'إعادة الحساب',
+    btn_save_attendance:'حفظ الحضور', btn_save_commission:'حفظ العمولة',
+    btn_add_category:'إضافة فئة',
+    label_data:'البيانات',
+    payroll_register:'سجل الرواتب',
+    field_name:'الاسم الكامل', field_emp_id:'رقم الموظف', field_dept:'القسم',
+    field_position:'المسمى الوظيفي', field_base_salary:'الراتب الأساسي (ر.س)',
+    field_housing:'بدل السكن (ر.س)', field_transport:'بدل النقل (ر.س)',
+    field_other_allow:'بدلات أخرى (ر.س)', field_gosi_emp:'التأمينات - الموظف %',
+    field_gosi_er:'التأمينات - صاحب العمل %', field_join_date:'تاريخ الالتحاق',
+    field_status:'الحالة', field_commission:'العمولة',
+    field_comm_cats:'فئات العمولة',
+    field_comm_cats_hint:'اختر الفئات التي يحصل منها الموظف على عمولة.',
+    field_notes:'ملاحظات',
+    status_active:'نشط', status_inactive:'غير نشط',
+    ot_desc:'حدد معادلة حساب العمل الإضافي. يجب أن تُعيد المبلغ الإجمالي للإضافي بالريال.',
+    ot_vars:'المتغيرات المتاحة', ot_multiplier:'معامل الإضافي', ot_formula_label:'معادلة الإضافي',
+    cats_desc:'حدد فئات العمولة. لكل فئة نوع معدل: نسبة من قيمة المبيعات أو مبلغ ثابت لكل وحدة.',
+    col_name:'الاسم', col_dept:'القسم', col_position:'المسمى', col_base:'الراتب الأساسي',
+    col_commission:'العمولة', col_status:'الحالة', col_actions:'إجراءات',
+    col_allowances:'البدلات', col_ot:'إضافي', col_deductions:'الخصومات',
+    col_net:'صافي الراتب', col_gross:'الإجمالي', col_paid:'مدفوع',
+    col_employees:'الموظفون', col_month:'الشهر', col_total_gross:'إجمالي المدفوعات',
+    col_total_deductions:'إجمالي الخصومات', col_total_net:'صافي الإجمالي',
+    col_est_commission:'العمولة التقديرية',
+    col_emp:'الموظف',
+    lbl_employees:'الموظفون', lbl_base_salary:'الراتب الأساسي', lbl_total_gross:'الإجمالي',
+    lbl_departments:'الأقسام', lbl_inactive:'غير نشط', lbl_on_commission:'بعمولة',
+    lbl_work_days:'أيام العمل', lbl_absent_days:'أيام الغياب', lbl_ot_hours:'ساعات الإضافي',
+    lbl_additions:'إضافات (ر.س)', lbl_extra_deductions:'خصومات إضافية (ر.س)',
+    lbl_ot:'إضافي', lbl_deductions:'الخصومات', lbl_net_pay:'صافي الراتب',
+    lbl_total_deductions:'إجمالي الخصومات',
+    lbl_all:'الكل', lbl_pending:'معلق', lbl_paid:'مدفوع',
+    lbl_all_depts:'كل الأقسام',
+    lbl_search:'بحث عن موظف...',
+    lbl_select_month:'اختر الشهر',
+    lbl_no_records:'اختر شهراً ثم انقر "معالجة الرواتب"',
+    lbl_no_employees:'لا يوجد موظفون',
+    lbl_no_commission:'لا توجد فئات عمولة محددة.',
+    lbl_no_comm_employees:'لا يوجد موظفون نشطون مع فئات عمولة.',
+    lbl_go_employees:'الذهاب للموظفين',
+    lbl_add_cats:'إضافة فئات',
+    lbl_process_first:'لا توجد سجلات رواتب لهذا الشهر. قم بمعالجة الرواتب أولاً.',
+    lbl_salary_statement:'كشف الراتب',
+    lbl_generated:'تاريخ الإصدار',
+    lbl_employee:'الموظف', lbl_id:'الرقم', lbl_dept:'القسم', lbl_position:'المسمى',
+    lbl_join_date:'تاريخ الالتحاق', lbl_days_worked:'أيام العمل',
+    lbl_earnings:'الاستحقاقات', lbl_base:'الراتب الأساسي', lbl_housing:'بدل السكن',
+    lbl_transport:'بدل النقل', lbl_other:'بدلات أخرى',
+    lbl_additional:'مستحقات إضافية', lbl_overtime:'الوقت الإضافي',
+    lbl_gross_earnings:'إجمالي الاستحقاقات',
+    lbl_absent:'الغياب', lbl_other_ded:'خصومات أخرى',
+    lbl_emp_signature:'توقيع الموظف', lbl_hr_signature:'الموارد البشرية',
+    lbl_ytd_dept:'صافي الرواتب السنوي حسب القسم', lbl_monthly_summary:'الملخص الشهري',
+    lbl_comm_entry:'إدخال العمولة',
+    lbl_sales_or_units:'أدخل قيمة المبيعات (ر.س) أو عدد الوحدات لكل فئة',
+    lbl_pct_of_value:'% من القيمة', lbl_sar_unit:'ر.س / وحدة',
+    lbl_no_payroll_year:'لا توجد سجلات رواتب لهذا العام',
+    msg_delete_emp:'حذف هذا الموظف؟',
+    msg_save_att:'تم حفظ الحضور!', msg_save_comm:'تم حفظ العمولة!',
+    msg_imported:'تم الاستيراد بنجاح!', msg_invalid_file:'ملف غير صالح',
+    msg_select_month:'اختر الشهر', msg_no_employees:'لا يوجد موظفون',
+    msg_paid_warning:'بعض الموظفين تم صرف رواتبهم. إعادة الحساب تحتفظ بحالة الصرف وتعيد الحساب. هل تريد المتابعة؟',
+    msg_formula_empty:'لا يمكن أن تكون المعادلة فارغة', msg_invalid_formula:'معادلة غير صالحة: ',
+    msg_ot_saved:'تم حفظ إعدادات الإضافي!', msg_cats_saved:'تم حفظ الفئات!',
+    msg_cat_name_required:'يجب إدخال اسم لكل فئة',
+    msg_name_required:'الاسم مطلوب',
+    modal_add_emp:'إضافة موظف', modal_edit_emp:'تعديل الموظف',
+    lbl_edit_ot:'تعديل معادلة الإضافي',
+  }
+};
+
+const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+let lang = localStorage.getItem('payrollpro_lang') || 'en';
+
+function t(key) { return (i18n[lang]||i18n.en)[key] || i18n.en[key] || key; }
+
+function applyLang() {
+  const html = document.documentElement;
+  html.lang = lang;
+  html.dir = lang==='ar' ? 'rtl' : 'ltr';
+  document.getElementById('lang-btn').textContent = lang==='ar' ? 'English' : 'العربية';
+  document.getElementById('logo-sub').textContent = t('logo_sub');
+  // update all static data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if(el.tagName==='INPUT') el.placeholder = t(key);
+    else el.textContent = t(key);
+  });
+  // update dynamic placeholders
+  const es = document.getElementById('emp-search');
+  if(es) es.placeholder = t('lbl_search');
+  // re-render current page
+  const activePage = document.querySelector('.page.active')?.id?.replace('page-','');
+  if(activePage) {
+    if(activePage==='dashboard') renderDashboard();
+    else if(activePage==='employees') renderEmployees();
+    else if(activePage==='payroll') renderPayroll();
+    else if(activePage==='attendance') renderAttendance();
+    else if(activePage==='commission') renderCommission();
+    else if(activePage==='payslips') renderPayslipList();
+    else if(activePage==='reports') renderReports();
+  }
+  // update payroll status filter
+  updatePayrollStatusFilter();
+  // update month dropdowns text
+  initMonthDropdowns(true);
+}
+
+function toggleLang() {
+  lang = lang==='en' ? 'ar' : 'en';
+  localStorage.setItem('payrollpro_lang', lang);
+  applyLang();
+}
+
+function updatePayrollStatusFilter() {
+  const sel = document.getElementById('payroll-status-filter');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">${t('lbl_all')}</option><option value="pending">${t('lbl_pending')}</option><option value="paid">${t('lbl_paid')}</option>`;
+  sel.value = cur;
+}
+
+// ── State ──────────────────────────────────────────────
+let employees = [];
+let payrollRecords = {};
+let attendanceRecords = {};
+let commissionRecords = {};
+let commissionCategories = [];
+let otSettings = { formula: 'hourlyRate * otHours * otMultiplier', multiplier: 1.5 };
+let editingEmpId = null;
+
+// ── Helpers ────────────────────────────────────────────
+const fmt  = n => Number(n||0).toLocaleString(lang==='ar'?'ar-SA':'en-SA',{minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtD = n => Number(n||0).toLocaleString(lang==='ar'?'ar-SA':'en-SA',{minimumFractionDigits:2,maximumFractionDigits:2});
+const daysInMonth = ym => { if(!ym) return 30; const [y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); };
+
+function getMonthVal(prefix) {
+  const m = document.getElementById(prefix+'-m')?.value;
+  const y = document.getElementById(prefix+'-y')?.value;
+  return (m&&y) ? `${y}-${m}` : '';
+}
+
+// ── Persist ────────────────────────────────────────────
+function saveData() {
+  localStorage.setItem('payrollpro_v2', JSON.stringify({employees,payrollRecords,attendanceRecords,commissionRecords,commissionCategories,otSettings}));
+}
+function loadData() {
+  try {
+    const raw = localStorage.getItem('payrollpro_v2') || localStorage.getItem('payrollpro_data');
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    employees=d.employees||[]; payrollRecords=d.payrollRecords||{};
+    attendanceRecords=d.attendanceRecords||{}; commissionRecords=d.commissionRecords||{};
+    commissionCategories=d.commissionCategories||[];
+    if(d.otSettings) otSettings=d.otSettings;
+  } catch(e){}
+}
+function exportData() {
+  const blob = new Blob([JSON.stringify({employees,payrollRecords,attendanceRecords,commissionRecords,commissionCategories,otSettings},null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='payrollpro_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+}
+function importData(ev) {
+  const file=ev.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try {
+      const d=JSON.parse(e.target.result);
+      employees=d.employees||[]; payrollRecords=d.payrollRecords||{};
+      attendanceRecords=d.attendanceRecords||{}; commissionRecords=d.commissionRecords||{};
+      commissionCategories=d.commissionCategories||[];
+      if(d.otSettings) otSettings=d.otSettings;
+      saveData(); navigate('dashboard'); alert(t('msg_imported'));
+    } catch { alert(t('msg_invalid_file')); }
+  };
+  r.readAsText(file);
+}
+
+// ── Navigation ─────────────────────────────────────────
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    const span=n.querySelector('[data-i18n]');
+    if(span){
+      const key=span.getAttribute('data-i18n');
+      const en=i18n.en[key]||''; const ar=i18n.ar[key]||'';
+      const text=n.textContent.trim();
+      if(en.toLowerCase().includes(page)||ar.includes(page)||(key.includes(page))){ n.classList.add('active'); }
+    }
+  });
+  // simpler: match by page id suffix
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    const fn=n.getAttribute('onclick')||'';
+    if(fn.includes("'"+page+"'")) n.classList.add('active');
+  });
+  if(page==='dashboard')  renderDashboard();
+  if(page==='employees')  renderEmployees();
+  if(page==='payroll')    renderPayroll();
+  if(page==='attendance') renderAttendance();
+  if(page==='commission') renderCommission();
+  if(page==='payslips')   renderPayslipList();
+  if(page==='reports')    renderReports();
+}
+
+// ── Dashboard ──────────────────────────────────────────
+function renderDashboard() {
+  const months = lang==='ar' ? MONTHS_AR : MONTHS_EN;
+  const now = new Date();
+  document.getElementById('dash-date').textContent = now.toLocaleDateString(lang==='ar'?'ar-SA':'en-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const active=employees.filter(e=>e.status==='active');
+  const totalBase=active.reduce((s,e)=>s+Number(e.salary||0),0);
+  const totalAllow=active.reduce((s,e)=>s+Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0),0);
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-card"><div class="stat-label">${t('lbl_employees')}</div><div class="stat-value">${active.length}</div><div class="stat-sub">${employees.filter(e=>e.status==='inactive').length} ${t('lbl_inactive')}</div></div>
+    <div class="stat-card"><div class="stat-label">${t('lbl_base_salary')}</div><div class="stat-value stat-accent">${fmt(totalBase)}</div><div class="stat-sub">SAR / ${months[now.getMonth()]}</div></div>
+    <div class="stat-card"><div class="stat-label">${t('lbl_total_gross')}</div><div class="stat-value">${fmt(totalBase+totalAllow)}</div><div class="stat-sub">SAR</div></div>
+    <div class="stat-card"><div class="stat-label">${t('lbl_departments')}</div><div class="stat-value">${getDepts().length}</div><div class="stat-sub">${active.filter(e=>(e.commissionCats||[]).length>0).length} ${t('lbl_on_commission')}</div></div>`;
+  const recent=employees.slice(-5).reverse();
+  document.getElementById('dash-recent').innerHTML=recent.length?recent.map(e=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div><div style="font-size:13px;font-weight:500;">${e.name}</div><div style="font-size:11px;color:var(--text2);">${e.dept||''} · ${e.position||''}</div></div>
+      <div style="text-align:end;"><div style="font-family:var(--mono);font-size:13px;">${fmt(e.salary)} SAR</div><span class="badge ${e.status==='active'?'badge-active':'badge-inactive'}">${t('status_'+e.status)}</span></div>
+    </div>`).join('') : `<div class="empty">${t('lbl_no_employees')}</div>`;
+  const deptMap={};
+  active.forEach(e=>{ deptMap[e.dept||'—']=(deptMap[e.dept||'—']||0)+Number(e.salary||0)+Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0); });
+  const maxV=Math.max(...Object.values(deptMap),1);
+  document.getElementById('dash-dept').innerHTML=Object.keys(deptMap).length
+    ?`<div class="bar-wrap">${Object.entries(deptMap).sort((a,b)=>b[1]-a[1]).map(([d,v])=>`<div class="bar-item"><div class="bar-label">${d}</div><div class="bar-track"><div class="bar-fill" style="width:${(v/maxV*100).toFixed(1)}%"></div></div><div class="bar-val">${fmt(v)}</div></div>`).join('')}</div>`
+    :`<div class="empty" style="padding:20px"></div>`;
+}
+
+// ── Employees ──────────────────────────────────────────
+function getDepts() { return [...new Set(employees.map(e=>e.dept).filter(Boolean))].sort(); }
+
+function openEmpModal(id=null) {
+  editingEmpId=id;
+  document.getElementById('emp-modal-title').textContent=id?t('modal_edit_emp'):t('modal_add_emp');
+  ['name','id','dept','pos','salary','housing','transport','other','join','notes'].forEach(f=>{const el=document.getElementById('f-'+f);if(el)el.value='';});
+  document.getElementById('f-gosi-emp').value='9.75';
+  document.getElementById('f-gosi-er').value='11.75';
+  document.getElementById('f-status').value='active';
+  const catBox=document.getElementById('f-comm-cats');
+  if(!commissionCategories.length){
+    catBox.innerHTML=`<div style="font-size:12px;color:var(--text2);padding:8px;background:var(--navy);border-radius:6px;">${t('lbl_no_commission')}</div>`;
+  } else {
+    catBox.innerHTML=commissionCategories.map(c=>`
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--navy);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" id="fcat-${c.id}" style="accent-color:var(--accent);width:15px;height:15px;flex-shrink:0;">
+        <span style="flex:1;">${c.name}</span>
+        <span style="font-size:11px;color:var(--text2);font-family:var(--mono);direction:ltr;">${c.rateType==='percent'?c.rate+'%':c.rate+' SAR'}/unit</span>
+      </label>`).join('');
+  }
+  if(id){
+    const e=employees.find(x=>x.id===id);
+    if(e){
+      document.getElementById('f-name').value=e.name||'';
+      document.getElementById('f-id').value=e.empId||'';
+      document.getElementById('f-dept').value=e.dept||'';
+      document.getElementById('f-pos').value=e.position||'';
+      document.getElementById('f-salary').value=e.salary||'';
+      document.getElementById('f-housing').value=e.housing||'';
+      document.getElementById('f-transport').value=e.transport||'';
+      document.getElementById('f-other').value=e.other||'';
+      document.getElementById('f-gosi-emp').value=e.gosiEmp??9.75;
+      document.getElementById('f-gosi-er').value=e.gosiEr??11.75;
+      document.getElementById('f-join').value=e.joinDate||'';
+      document.getElementById('f-status').value=e.status||'active';
+      document.getElementById('f-notes').value=e.notes||'';
+      (e.commissionCats||[]).forEach(catId=>{const cb=document.getElementById('fcat-'+catId);if(cb)cb.checked=true;});
+    }
+  }
+  document.getElementById('dept-list').innerHTML=getDepts().map(d=>`<option value="${d}">`).join('');
+  document.getElementById('emp-modal').classList.add('open');
+}
+function closeEmpModal(){ document.getElementById('emp-modal').classList.remove('open'); editingEmpId=null; }
+
+function saveEmployee(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){alert(t('msg_name_required'));return;}
+  const commissionCats=commissionCategories.filter(c=>document.getElementById('fcat-'+c.id)?.checked).map(c=>c.id);
+  const emp={
+    id:editingEmpId||Date.now().toString(), name,
+    empId:document.getElementById('f-id').value.trim(),
+    dept:document.getElementById('f-dept').value.trim(),
+    position:document.getElementById('f-pos').value.trim(),
+    salary:parseFloat(document.getElementById('f-salary').value)||0,
+    housing:parseFloat(document.getElementById('f-housing').value)||0,
+    transport:parseFloat(document.getElementById('f-transport').value)||0,
+    other:parseFloat(document.getElementById('f-other').value)||0,
+    gosiEmp:document.getElementById('f-gosi-emp').value===''?9.75:parseFloat(document.getElementById('f-gosi-emp').value),
+    gosiEr:document.getElementById('f-gosi-er').value===''?11.75:parseFloat(document.getElementById('f-gosi-er').value),
+    joinDate:document.getElementById('f-join').value,
+    status:document.getElementById('f-status').value,
+    notes:document.getElementById('f-notes').value.trim(),
+    commissionCats
+  };
+  if(editingEmpId){const i=employees.findIndex(e=>e.id===editingEmpId);if(i>-1)employees[i]=emp;}
+  else employees.push(emp);
+  saveData(); closeEmpModal(); renderEmployees();
+}
+
+function deleteEmployee(id){
+  if(!confirm(t('msg_delete_emp'))) return;
+  employees=employees.filter(e=>e.id!==id);
+  saveData(); renderEmployees();
+}
+
+function renderEmployees(){
+  const search=(document.getElementById('emp-search').value||'').toLowerCase();
+  const df=document.getElementById('emp-dept-filter').value;
+  const depts=getDepts();
+  document.getElementById('emp-dept-filter').innerHTML=`<option value="">${t('lbl_all_depts')}</option>`+depts.map(d=>`<option value="${d}" ${d===df?'selected':''}>${d}</option>`).join('');
+  document.getElementById('emp-search').placeholder=t('lbl_search');
+  const list=employees.filter(e=>{
+    const ms=!search||e.name.toLowerCase().includes(search)||(e.empId||'').toLowerCase().includes(search)||(e.dept||'').toLowerCase().includes(search);
+    return ms&&(!df||e.dept===df);
+  });
+  document.getElementById('emp-count-label').textContent=`${employees.length} ${t('lbl_employees')} · ${employees.filter(e=>e.status==='active').length} ${t('status_active')}`;
+  document.getElementById('emp-thead').innerHTML=`<th>${t('col_name')}</th><th>${t('col_dept')}</th><th>${t('col_position')}</th><th>${t('col_base')}</th><th>${t('col_commission')}</th><th>${t('col_status')}</th><th>${t('col_actions')}</th>`;
+  const tbody=document.getElementById('emp-tbody');
+  if(!list.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`;return;}
+  tbody.innerHTML=list.map(e=>{
+    const gross=Number(e.salary||0)+Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0);
+    const catNames=(e.commissionCats||[]).map(id=>commissionCategories.find(c=>c.id===id)?.name||'').filter(Boolean);
+    return`<tr>
+      <td><div style="font-weight:500;">${e.name}</div><div style="font-size:11px;color:var(--text2);">${e.empId||''}</div></td>
+      <td style="color:var(--text2);">${e.dept||'—'}</td>
+      <td style="color:var(--text2);">${e.position||'—'}</td>
+      <td style="font-family:var(--mono);direction:ltr;text-align:start;">${fmt(e.salary)} <span style="color:var(--text2);font-size:11px;">+${fmt(gross-e.salary)}</span></td>
+      <td>${catNames.length?catNames.map(n=>`<span class="badge badge-comm" style="margin:1px;">${n}</span>`).join(''):'<span style="color:var(--text2);">—</span>'}</td>
+      <td><span class="badge ${e.status==='active'?'badge-active':'badge-inactive'}">${t('status_'+e.status)}</span></td>
+      <td><div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary btn-sm" onclick="openEmpModal('${e.id}')">${t('col_actions').split(' ')[0]||'Edit'} ✎</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e.id}')">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── OT ────────────────────────────────────────────────
+function calcOT(emp,otHours,workDays){
+  try{
+    const baseSalary=Number(emp.salary||0),otMultiplier=Number(otSettings.multiplier||1.5),wd=Number(workDays||22);
+    const hourlyRate=baseSalary/(wd*8),dailyRate=baseSalary/wd;
+    const fn=new Function('baseSalary','hourlyRate','dailyRate','otHours','workDays','otMultiplier','return ('+otSettings.formula+')');
+    const r=fn(baseSalary,hourlyRate,dailyRate,Number(otHours||0),wd,otMultiplier);
+    return isNaN(r)||!isFinite(r)?0:Math.max(0,r);
+  }catch{return 0;}
+}
+
+// ── Commission ─────────────────────────────────────────
+function calcCommission(emp,month){
+  const cats=emp.commissionCats||[];
+  if(!cats.length) return {total:0,breakdown:[]};
+  const rec=(commissionRecords[month]||{})[emp.id]||{};
+  const breakdown=[]; let total=0;
+  cats.forEach(catId=>{
+    const cat=commissionCategories.find(c=>c.id===catId); if(!cat) return;
+    const value=Number(rec[catId]||0); if(!value) return;
+    const amount=cat.rateType==='percent'?value*(cat.rate/100):value*cat.rate;
+    breakdown.push({name:cat.name,value,rateType:cat.rateType,rate:cat.rate,amount});
+    total+=amount;
+  });
+  return {total,breakdown};
+}
+
+// ── Payroll ────────────────────────────────────────────
+function processPayroll(force=false){
+  const month=getMonthVal('payroll-month');
+  if(!month){alert(t('msg_select_month'));return;}
+  if(!employees.length){alert(t('msg_no_employees'));return;}
+  const existing=payrollRecords[month]||{};
+  if(force&&Object.values(existing).some(r=>r.status==='paid')){
+    if(!confirm(t('msg_paid_warning'))) return;
+  }
+  payrollRecords[month]=payrollRecords[month]||{};
+  const att=attendanceRecords[month]||{};
+  const dd=daysInMonth(month);
+  employees.filter(e=>e.status==='active').forEach(e=>{
+    const workDays=att[e.id]?.workDays??dd;
+    const absentDays=att[e.id]?.absentDays??0;
+    const additions=att[e.id]?.additions??0;
+    const extraDed=att[e.id]?.deductions??0;
+    const otHours=att[e.id]?.otHours??0;
+    const dailyRate=Number(e.salary||0)/workDays;
+    const absentDed=dailyRate*absentDays;
+    const gosiDed=Number(e.salary||0)*((e.gosiEmp??9.75)/100);
+    const totalDed=absentDed+gosiDed+extraDed;
+    const otPay=calcOT(e,otHours,workDays);
+    const {total:commPay,breakdown:commBreakdown}=calcCommission(e,month);
+    const allowances=Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0)+Number(additions);
+    const gross=Number(e.salary||0)+allowances+otPay+commPay;
+    const net=gross-totalDed;
+    if(!existing[e.id]||force){
+      payrollRecords[month][e.id]={
+        status:force?(existing[e.id]?.status||'pending'):'pending',
+        paidAt:force?(existing[e.id]?.paidAt||null):null,
+        workDays,absentDays,additions,extraDed,otHours,otPay,commPay,commBreakdown,
+        absentDed,gosiDed,totalDed,allowances,gross,net,
+        processedAt:new Date().toISOString()
+      };
+    }
+  });
+  saveData(); renderPayroll();
+}
+
+function renderPayroll(){
+  const month=getMonthVal('payroll-month');
+  updatePayrollStatusFilter();
+  const sf=document.getElementById('payroll-status-filter').value;
+  const records=payrollRecords[month]||{};
+  const hasRec=Object.keys(records).length>0;
+  document.getElementById('btn-process').style.display=hasRec?'none':'inline-flex';
+  document.getElementById('btn-regen').style.display=hasRec?'inline-flex':'none';
+  document.getElementById('payroll-thead').innerHTML=`<th>${t('col_emp')}</th><th>${t('col_dept')}</th><th>${t('col_base')}</th><th>${t('col_allowances')}</th><th>${t('col_ot')}</th><th>${t('col_commission')}</th><th>${t('col_deductions')}</th><th>${t('col_net')}</th><th>${t('col_status')}</th><th>${t('col_actions')}</th>`;
+  const tbody=document.getElementById('payroll-tbody');
+  const activeEmps=employees.filter(e=>e.status==='active');
+  if(!month||!hasRec){
+    tbody.innerHTML=`<tr><td colspan="10"><div class="empty">${t('lbl_no_records')}</div></td></tr>`;
+    document.getElementById('payroll-summary').innerHTML=''; return;
+  }
+  let tGross=0,tNet=0,tDed=0,tOT=0,tComm=0,count=0;
+  const rows=activeEmps.filter(e=>records[e.id]&&(!sf||records[e.id].status===sf));
+  tbody.innerHTML=rows.map(e=>{
+    const r=records[e.id];
+    tGross+=r.gross;tNet+=r.net;tDed+=r.totalDed;tOT+=r.otPay||0;tComm+=r.commPay||0;count++;
+    return`<tr>
+      <td><div style="font-weight:500;">${e.name}</div><div style="font-size:11px;color:var(--text2);">${e.empId||''}</div></td>
+      <td style="color:var(--text2);">${e.dept||'—'}</td>
+      <td style="font-family:var(--mono);direction:ltr;text-align:start;">${fmt(e.salary)}</td>
+      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">+${fmt(r.allowances)}</td>
+      <td style="font-family:var(--mono);color:var(--amber);direction:ltr;text-align:start;">${r.otHours>0?`+${fmtD(r.otPay)} (${r.otHours}h)`:'—'}</td>
+      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">${r.commPay>0?`+${fmtD(r.commPay)}`:'—'}</td>
+      <td style="font-family:var(--mono);color:var(--red);direction:ltr;text-align:start;">-${fmt(r.totalDed)}</td>
+      <td style="font-family:var(--mono);font-weight:500;direction:ltr;text-align:start;">${fmt(r.net)}</td>
+      <td><span class="badge ${r.status==='paid'?'badge-paid':'badge-pending'}">${t('lbl_'+r.status)}</span></td>
+      <td><div style="display:flex;gap:5px;">
+        ${r.status==='pending'?`<button class="btn btn-secondary btn-sm" onclick="markPaid('${month}','${e.id}')">${t('lbl_paid')} ✓</button>`:''}
+        <button class="btn btn-secondary btn-sm" onclick="viewSlip('${e.id}','${month}')">📄</button>
+      </div></td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="10"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`;
+  document.getElementById('payroll-summary').innerHTML=`
+    <div class="ps-item"><div class="ps-label">${t('lbl_employees')}</div><div class="ps-val">${count}</div></div>
+    <div class="ps-item"><div class="ps-label">${t('lbl_total_gross')}</div><div class="ps-val">${fmt(tGross)} SAR</div></div>
+    <div class="ps-item"><div class="ps-label">${t('lbl_ot')}</div><div class="ps-val amber">+${fmtD(tOT)} SAR</div></div>
+    <div class="ps-item"><div class="ps-label">${t('nav_commission')}</div><div class="ps-val green">+${fmtD(tComm)} SAR</div></div>
+    <div class="ps-item"><div class="ps-label">${t('lbl_deductions')}</div><div class="ps-val red">-${fmt(tDed)} SAR</div></div>
+    <div class="ps-item"><div class="ps-label">${t('lbl_net_pay')}</div><div class="ps-val green">${fmt(tNet)} SAR</div></div>`;
+}
+
+function markPaid(month,empId){
+  if(payrollRecords[month]?.[empId]){
+    payrollRecords[month][empId].status='paid';
+    payrollRecords[month][empId].paidAt=new Date().toISOString();
+    saveData(); renderPayroll();
+  }
+}
+
+// ── Attendance ─────────────────────────────────────────
+function renderAttendance(){
+  const month=getMonthVal('att-month');
+  if(!month){document.getElementById('att-grid-wrap').innerHTML=`<div class="empty">${t('lbl_select_month')}</div>`;return;}
+  const att=attendanceRecords[month]||{};
+  const active=employees.filter(e=>e.status==='active');
+  const dd=daysInMonth(month);
+  document.getElementById('att-grid-wrap').innerHTML=`
+    <div class="card">
+      <div class="card-header">
+        <h3>${t('nav_attendance')} — ${month}</h3>
+        <span style="font-size:11px;color:var(--text2);">${t('lbl_ot')}: <code style="font-family:var(--mono);color:var(--accent);direction:ltr;">${otSettings.formula}</code></span>
+        <button class="btn btn-secondary btn-sm" onclick="openOtSettings()">${t('lbl_edit_ot')}</button>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;">
+          ${active.map(e=>`
+            <div class="att-card">
+              <div style="font-size:13px;font-weight:500;margin-bottom:3px;">${e.name}</div>
+              <div style="font-size:11px;color:var(--text2);margin-bottom:10px;">${e.dept||''}</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div><div class="field-label">${t('lbl_work_days')}</div><input class="inp" type="number" id="att-wd-${e.id}" value="${att[e.id]?.workDays??dd}" min="0" max="31"></div>
+                <div><div class="field-label">${t('lbl_absent_days')}</div><input class="inp" type="number" id="att-ab-${e.id}" value="${att[e.id]?.absentDays??0}" min="0" max="31"></div>
+                <div><div class="field-label amber">${t('lbl_ot_hours')}</div><input class="inp inp-amber" type="number" id="att-ot-${e.id}" value="${att[e.id]?.otHours??0}" min="0" step="0.5"></div>
+                <div><div class="field-label green">${t('lbl_additions')}</div><input class="inp inp-green" type="number" id="att-add-${e.id}" value="${att[e.id]?.additions??0}" min="0"></div>
+                <div style="grid-column:1/-1;"><div class="field-label red">${t('lbl_extra_deductions')}</div><input class="inp inp-red" type="number" id="att-ded-${e.id}" value="${att[e.id]?.deductions??0}" min="0"></div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function saveAttendance(){
+  const month=getMonthVal('att-month');
+  if(!month) return;
+  attendanceRecords[month]=attendanceRecords[month]||{};
+  employees.filter(e=>e.status==='active').forEach(e=>{
+    attendanceRecords[month][e.id]={
+      workDays:parseInt(document.getElementById('att-wd-'+e.id)?.value)||daysInMonth(month),
+      absentDays:parseInt(document.getElementById('att-ab-'+e.id)?.value)||0,
+      otHours:parseFloat(document.getElementById('att-ot-'+e.id)?.value)||0,
+      additions:parseFloat(document.getElementById('att-add-'+e.id)?.value)||0,
+      deductions:parseFloat(document.getElementById('att-ded-'+e.id)?.value)||0
+    };
+  });
+  saveData(); alert(t('msg_save_att'));
+}
+
+// ── Commission page ────────────────────────────────────
+function renderCommission(){
+  const month=getMonthVal('comm-month');
+  const wrap=document.getElementById('comm-wrap');
+  if(!month){wrap.innerHTML=`<div class="empty">${t('lbl_select_month')}</div>`;return;}
+  if(!commissionCategories.length){
+    wrap.innerHTML=`<div class="empty">${t('lbl_no_commission')}<br><button class="btn btn-secondary" style="margin-top:12px;" onclick="openCatSettings()">${t('lbl_add_cats')}</button></div>`;return;
+  }
+  const commEmps=employees.filter(e=>e.status==='active'&&(e.commissionCats||[]).length>0);
+  if(!commEmps.length){
+    wrap.innerHTML=`<div class="empty">${t('lbl_no_comm_employees')}<br><button class="btn btn-secondary" style="margin-top:12px;" onclick="navigate('employees')">${t('lbl_go_employees')}</button></div>`;return;
+  }
+  const rec=commissionRecords[month]||{};
+  wrap.innerHTML=`
+    <div class="card">
+      <div class="card-header"><h3>${t('lbl_comm_entry')} — ${month}</h3><span style="font-size:12px;color:var(--text2);">${t('lbl_sales_or_units')}</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>${t('col_emp')}</th>
+              ${commissionCategories.map(c=>`<th>${c.name}<br><span style="font-weight:400;color:var(--text2);">${c.rateType==='percent'?c.rate+'% '+t('lbl_pct_of_value'):c.rate+' '+t('lbl_sar_unit')}</span></th>`).join('')}
+              <th>${t('col_est_commission')}</th>
+            </tr>
+          </thead>
+          <tbody id="comm-tbody"></tbody>
+        </table>
+      </div>
+    </div>`;
+  document.getElementById('comm-tbody').innerHTML=commEmps.map(e=>{
+    const empRec=rec[e.id]||{};
+    const assignedCats=e.commissionCats||[];
+    const cells=commissionCategories.map(cat=>{
+      const isAssigned=assignedCats.includes(cat.id);
+      const val=empRec[cat.id]||0;
+      return isAssigned
+        ?`<td><input class="inp inp-green" type="number" id="comm-${e.id}-${cat.id}" value="${val}" min="0" step="0.01" oninput="updateCommPreview('${e.id}')" style="width:100px;direction:ltr;"></td>`
+        :`<td style="color:var(--text2);text-align:center;">—</td>`;
+    }).join('');
+    return`<tr>
+      <td><div style="font-weight:500;">${e.name}</div><div style="font-size:11px;color:var(--text2);">${e.dept||''}</div></td>
+      ${cells}
+      <td style="font-family:var(--mono);color:var(--green);font-weight:500;direction:ltr;" id="comm-preview-${e.id}">${fmtD(calcCommission(e,month).total)} SAR</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateCommPreview(empId){
+  const e=employees.find(x=>x.id===empId); if(!e) return;
+  const cats=e.commissionCats||[];
+  let total=0;
+  cats.forEach(catId=>{
+    const cat=commissionCategories.find(c=>c.id===catId); if(!cat) return;
+    const value=parseFloat(document.getElementById(`comm-${empId}-${catId}`)?.value)||0;
+    total+=cat.rateType==='percent'?value*(cat.rate/100):value*cat.rate;
+  });
+  const el=document.getElementById('comm-preview-'+empId);
+  if(el) el.textContent=fmtD(total)+' SAR';
+}
+
+function saveCommission(){
+  const month=getMonthVal('comm-month');
+  if(!month) return;
+  commissionRecords[month]=commissionRecords[month]||{};
+  employees.filter(e=>e.status==='active'&&(e.commissionCats||[]).length>0).forEach(e=>{
+    const empRec={};
+    (e.commissionCats||[]).forEach(catId=>{
+      const el=document.getElementById(`comm-${e.id}-${catId}`);
+      if(el) empRec[catId]=parseFloat(el.value)||0;
+    });
+    commissionRecords[month][e.id]=empRec;
+  });
+  saveData(); alert(t('msg_save_comm'));
+}
+
+// ── Payslips ───────────────────────────────────────────
+function renderPayslipList(){
+  const month=getMonthVal('slip-month');
+  const area=document.getElementById('payslip-area');
+  if(!month){area.innerHTML=`<div class="empty">${t('lbl_select_month')}</div>`;return;}
+  const records=payrollRecords[month]||{};
+  const active=employees.filter(e=>e.status==='active'&&records[e.id]);
+  if(!active.length){area.innerHTML=`<div class="empty">${t('lbl_process_first')}</div>`;return;}
+  area.innerHTML=`<div class="card"><div class="card-header"><h3>${t('nav_payslips')} — ${month}</h3></div><div class="table-wrap"><table>
+    <thead><tr><th>${t('col_emp')}</th><th>${t('col_dept')}</th><th>${t('col_gross')}</th><th>${t('col_commission')}</th><th>${t('col_deductions')}</th><th>${t('col_net')}</th><th>${t('col_status')}</th><th></th></tr></thead>
+    <tbody>${active.map(e=>{const r=records[e.id];return`<tr>
+      <td><div style="font-weight:500">${e.name}</div><div style="font-size:11px;color:var(--text2)">${e.empId||''}</div></td>
+      <td style="color:var(--text2)">${e.dept||'—'}</td>
+      <td style="font-family:var(--mono);direction:ltr;text-align:start;">${fmt(r.gross)}</td>
+      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">${r.commPay>0?'+'+fmtD(r.commPay)+' SAR':'—'}</td>
+      <td style="font-family:var(--mono);color:var(--red);direction:ltr;text-align:start;">-${fmt(r.totalDed)}</td>
+      <td style="font-family:var(--mono);font-weight:500;color:var(--amber);direction:ltr;text-align:start;">${fmt(r.net)}</td>
+      <td><span class="badge ${r.status==='paid'?'badge-paid':'badge-pending'}">${t('lbl_'+r.status)}</span></td>
+      <td><button class="btn btn-primary btn-sm" onclick="viewSlip('${e.id}','${month}')">${t('btn_print')} 📄</button></td>
+    </tr>`;}).join('')}</tbody>
+  </table></div></div>`;
+}
+
+function viewSlip(empId,month){
+  const e=employees.find(x=>x.id===empId);
+  const r=(payrollRecords[month]||{})[empId];
+  if(!e||!r) return;
+  const [yr,mo]=month.split('-');
+  const locale=lang==='ar'?'ar-SA':'en-SA';
+  const monthName=new Date(yr,parseInt(mo)-1,1).toLocaleString(locale,{month:'long',year:'numeric'});
+  const gosiAmt=Number(e.salary||0)*((e.gosiEmp??9.75)/100);
+  const commRows=(r.commBreakdown||[]).map(b=>`
+    <div class="payslip-row">
+      <span>${b.name} (${b.rateType==='percent'?fmtD(b.value)+' SAR × '+b.rate+'%':b.value+' × '+b.rate+' SAR'})</span>
+      <span style="color:var(--green-dark);font-weight:500;">${fmtD(b.amount)} SAR</span>
+    </div>`).join('');
+  document.getElementById('slip-modal-body').innerHTML=`
+    <div class="payslip" dir="${lang==='ar'?'rtl':'ltr'}">
+      <div class="payslip-header">
+        <div><div class="payslip-company">PayrollPro</div><div class="payslip-title">${t('lbl_salary_statement')}</div></div>
+        <div class="payslip-period"><div style="font-size:14px;font-weight:600">${monthName}</div><div>${t('lbl_generated')}: ${new Date().toLocaleDateString(locale)}</div></div>
+      </div>
+      <div class="payslip-employee">
+        <div><div style="color:#888;font-size:11px;margin-bottom:2px">${t('lbl_employee')}</div><div style="font-weight:600">${e.name}</div></div>
+        <div><div style="color:#888;font-size:11px;margin-bottom:2px">${t('lbl_id')}</div><div>${e.empId||'—'}</div></div>
+        <div><div style="color:#888;font-size:11px;margin-bottom:2px">${t('lbl_dept')}</div><div>${e.dept||'—'}</div></div>
+        <div><div style="color:#888;font-size:11px;margin-bottom:2px">${t('lbl_position')}</div><div>${e.position||'—'}</div></div>
+        <div><div style="color:#888;font-size:11px;margin-bottom:2px">${t('lbl_join_date')}</div><div>${e.joinDate||'—'}</div></div>
+        <div><div style="color:#888;font-size:11px;margin-bottom:2px">${t('lbl_days_worked')}</div><div>${r.workDays}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="payslip-section">
+          <h4>${t('lbl_earnings')}</h4>
+          <div class="payslip-row"><span>${t('lbl_base')}</span><span>${fmt(e.salary)} SAR</span></div>
+          <div class="payslip-row"><span>${t('lbl_housing')}</span><span>${fmt(e.housing)} SAR</span></div>
+          <div class="payslip-row"><span>${t('lbl_transport')}</span><span>${fmt(e.transport)} SAR</span></div>
+          ${Number(e.other)>0?`<div class="payslip-row"><span>${t('lbl_other')}</span><span>${fmt(e.other)} SAR</span></div>`:''}
+          ${Number(r.additions)>0?`<div class="payslip-row"><span>${t('lbl_additional')}</span><span>${fmtD(r.additions)} SAR</span></div>`:''}
+          ${Number(r.otPay)>0?`<div class="payslip-row"><span>${t('lbl_overtime')} (${r.otHours}h)</span><span style="color:var(--green-dark);font-weight:500;">${fmtD(r.otPay)} SAR</span></div>`:''}
+          ${commRows}
+          <div class="payslip-total"><span>${t('lbl_gross_earnings')}</span><span>${fmt(r.gross)} SAR</span></div>
+        </div>
+        <div class="payslip-section">
+          <h4>${t('lbl_deductions')}</h4>
+          <div class="payslip-row"><span>GOSI (${e.gosiEmp??9.75}%)</span><span>${fmtD(gosiAmt)} SAR</span></div>
+          ${Number(r.absentDed)>0?`<div class="payslip-row"><span>${t('lbl_absent')} (${r.absentDays})</span><span>${fmtD(r.absentDed)} SAR</span></div>`:''}
+          ${Number(r.extraDed)>0?`<div class="payslip-row"><span>${t('lbl_other_ded')}</span><span>${fmtD(r.extraDed)} SAR</span></div>`:''}
+          <div class="payslip-total"><span>${t('lbl_total_deductions')}</span><span>${fmtD(r.totalDed)} SAR</span></div>
+        </div>
+      </div>
+      <div class="payslip-net">
+        <div><div class="payslip-net-label">${t('lbl_net_pay')}</div><div style="font-size:11px;opacity:0.6;margin-top:2px">${monthName}</div></div>
+        <div class="payslip-net-value">${fmt(r.net)} SAR</div>
+      </div>
+      <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:40px;">
+        <div style="border-top:1px solid #ddd;padding-top:8px;font-size:11px;color:#888;text-align:center">${t('lbl_emp_signature')}</div>
+        <div style="border-top:1px solid #ddd;padding-top:8px;font-size:11px;color:#888;text-align:center">${t('lbl_hr_signature')}</div>
+      </div>
+    </div>`;
+  document.getElementById('slip-modal').classList.add('open');
+}
+
+// ── Reports ────────────────────────────────────────────
+function renderReports(){
+  const year=document.getElementById('report-year').value;
+  const months=Object.keys(payrollRecords).filter(m=>m.startsWith(year)).sort();
+  const area=document.getElementById('reports-area');
+  if(!months.length){area.innerHTML=`<div class="empty">${t('lbl_no_payroll_year')}</div>`;return;}
+  const locale=lang==='ar'?'ar-SA':'en-SA';
+  let html=`<div class="card" style="margin-bottom:20px;"><div class="card-header"><h3>${t('lbl_monthly_summary')} — ${year}</h3></div><div class="table-wrap"><table><thead><tr><th>${t('col_month')}</th><th>${t('col_employees')}</th><th>${t('col_total_gross')}</th><th>${t('nav_commission')}</th><th>${t('col_total_deductions')}</th><th>${t('col_total_net')}</th><th>${t('col_paid')}</th></tr></thead><tbody>`;
+  months.forEach(m=>{
+    const recs=payrollRecords[m]; let gross=0,ded=0,net=0,comm=0,count=0,paid=0;
+    Object.values(recs).forEach(r=>{gross+=r.gross||0;ded+=r.totalDed||0;net+=r.net||0;comm+=r.commPay||0;count++;if(r.status==='paid')paid++;});
+    const mo=new Date(m+'-01').toLocaleString(locale,{month:'long',year:'numeric'});
+    html+=`<tr><td style="font-weight:500">${mo}</td><td>${count}</td><td style="font-family:var(--mono);direction:ltr;text-align:start;">${fmt(gross)}</td><td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">${comm>0?'+'+fmtD(comm):'—'}</td><td style="font-family:var(--mono);color:var(--red);direction:ltr;text-align:start;">-${fmt(ded)}</td><td style="font-family:var(--mono);color:var(--amber);font-weight:500;direction:ltr;text-align:start;">${fmt(net)}</td><td><span class="badge ${paid===count?'badge-paid':'badge-pending'}">${paid}/${count}</span></td></tr>`;
+  });
+  html+='</tbody></table></div></div>';
+  const deptNet={};
+  months.forEach(m=>{const recs=payrollRecords[m]||{};employees.forEach(e=>{if(recs[e.id]){const d=e.dept||'—';deptNet[d]=(deptNet[d]||0)+recs[e.id].net;}});});
+  const maxV=Math.max(...Object.values(deptNet),1);
+  html+=`<div class="card"><div class="card-header"><h3>${t('lbl_ytd_dept')}</h3></div><div class="card-body"><div class="bar-wrap">${Object.entries(deptNet).sort((a,b)=>b[1]-a[1]).map(([d,v])=>`<div class="bar-item"><div class="bar-label">${d}</div><div class="bar-track"><div class="bar-fill" style="width:${(v/maxV*100).toFixed(1)}%"></div></div><div class="bar-val">${fmt(v)}</div></div>`).join('')}</div></div></div>`;
+  area.innerHTML=html;
+}
+
+// ── OT Settings ────────────────────────────────────────
+function openOtSettings(){ document.getElementById('ot-formula').value=otSettings.formula; document.getElementById('ot-multiplier').value=otSettings.multiplier; previewFormula(); document.getElementById('ot-modal').classList.add('open'); }
+function closeOtSettings(){ document.getElementById('ot-modal').classList.remove('open'); }
+function saveOtSettings(){
+  const formula=document.getElementById('ot-formula').value.trim();
+  const multiplier=parseFloat(document.getElementById('ot-multiplier').value)||1.5;
+  if(!formula){alert(t('msg_formula_empty'));return;}
+  try{new Function('baseSalary','hourlyRate','dailyRate','otHours','workDays','otMultiplier','return ('+formula+')')(10000,56.82,454,10,22,multiplier);}
+  catch(e){alert(t('msg_invalid_formula')+e.message);return;}
+  otSettings={formula,multiplier}; saveData(); closeOtSettings(); alert(t('msg_ot_saved'));
+}
+function setPreset(f){ document.getElementById('ot-formula').value=f; previewFormula(); }
+function insertVar(v){ const inp=document.getElementById('ot-formula'),pos=inp.selectionStart,val=inp.value; inp.value=val.slice(0,pos)+v+val.slice(pos); inp.focus(); inp.selectionStart=inp.selectionEnd=pos+v.length; previewFormula(); }
+function previewFormula(){
+  const formula=document.getElementById('ot-formula').value.trim();
+  const mult=parseFloat(document.getElementById('ot-multiplier').value)||1.5;
+  const prev=document.getElementById('ot-preview');
+  if(!formula){prev.innerHTML=t('ot_desc');return;}
+  try{
+    const r=new Function('baseSalary','hourlyRate','dailyRate','otHours','workDays','otMultiplier','return ('+formula+')')(10000,10000/(22*8),10000/22,10,22,mult);
+    if(isNaN(r)||!isFinite(r)) throw new Error('not a valid number');
+    prev.innerHTML=`10,000 SAR · 22 ${t('lbl_work_days')} · 10h · ×${mult}: <span>${fmtD(r)} SAR</span>`;
+  }catch(e){prev.innerHTML=`<span style="color:var(--red)">${t('msg_invalid_formula')} ${e.message}</span>`;}
+}
+
+// ── Commission Categories ──────────────────────────────
+function openCatSettings(){ renderCatList(); document.getElementById('cat-modal').classList.add('open'); }
+function closeCatSettings(){ document.getElementById('cat-modal').classList.remove('open'); }
+function renderCatList(){
+  const list=document.getElementById('cat-list');
+  if(!commissionCategories.length){list.innerHTML=`<div style="font-size:13px;color:var(--text2);text-align:center;padding:16px;">${t('lbl_no_commission')}</div>`;return;}
+  list.innerHTML=commissionCategories.map(c=>`
+    <div class="cat-row">
+      <input class="inp" type="text" id="cat-name-${c.id}" value="${c.name}" placeholder="${t('col_name')}" style="flex:2;">
+      <select class="inp" id="cat-type-${c.id}" style="flex:1;">
+        <option value="percent" ${c.rateType==='percent'?'selected':''}>${t('lbl_pct_of_value')}</option>
+        <option value="fixed" ${c.rateType==='fixed'?'selected':''}>${t('lbl_sar_unit')}</option>
+      </select>
+      <input class="inp" type="number" id="cat-rate-${c.id}" value="${c.rate}" min="0" step="0.01" style="flex:1;direction:ltr;">
+      <button class="btn btn-danger btn-sm" onclick="removeCatRow('${c.id}')">✕</button>
+    </div>`).join('');
+}
+function addCatRow(){
+  commissionCategories.push({id:Date.now().toString(),name:'',rateType:'percent',rate:0});
+  renderCatList();
+}
+function removeCatRow(id){
+  commissionCategories=commissionCategories.filter(c=>c.id!==id);
+  employees.forEach(e=>{if(e.commissionCats)e.commissionCats=e.commissionCats.filter(x=>x!==id);});
+  renderCatList();
+}
+function saveCatSettings(){
+  const updated=[];
+  for(const c of commissionCategories){
+    const name=(document.getElementById('cat-name-'+c.id)?.value||'').trim();
+    if(!name){alert(t('msg_cat_name_required'));return;}
+    updated.push({id:c.id,name,rateType:document.getElementById('cat-type-'+c.id)?.value||'percent',rate:parseFloat(document.getElementById('cat-rate-'+c.id)?.value)||0});
+  }
+  commissionCategories=updated; saveData(); closeCatSettings(); alert(t('msg_cats_saved'));
+}
+
+// ── Init ───────────────────────────────────────────────
+function initYearSelector(){
+  const sel=document.getElementById('report-year'),cur=new Date().getFullYear();
+  for(let y=cur;y>=cur-4;y--) sel.innerHTML+=`<option value="${y}">${y}</option>`;
+}
+function initMonthDropdowns(update=false){
+  const now=new Date(),curM=now.getMonth(),curY=now.getFullYear();
+  const months=lang==='ar'?MONTHS_AR:MONTHS_EN;
+  const pairs=[['payroll-month-m','payroll-month-y'],['att-month-m','att-month-y'],['slip-month-m','slip-month-y'],['comm-month-m','comm-month-y']];
+  pairs.forEach(([mId,yId])=>{
+    const ms=document.getElementById(mId),ys=document.getElementById(yId);
+    if(!ms||!ys) return;
+    const curMVal=ms.value||String(curM+1).padStart(2,'0');
+    const curYVal=ys.value||String(curY);
+    ms.innerHTML=''; ys.innerHTML='';
+    months.forEach((name,i)=>ms.innerHTML+=`<option value="${String(i+1).padStart(2,'0')}" ${String(i+1).padStart(2,'0')===curMVal?'selected':''}>${name}</option>`);
+    for(let y=curY+1;y>=curY-5;y--) ys.innerHTML+=`<option value="${y}" ${String(y)===curYVal?'selected':''}>${y}</option>`;
+  });
+}
+
+loadData();
+initYearSelector();
+initMonthDropdowns();
+updatePayrollStatusFilter();
+applyLang();
+renderDashboard();
+</script>
+</body>
+</html>
