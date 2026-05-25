@@ -816,7 +816,7 @@ function navigate(page) {
 function renderDashboard() {
   const months = lang==='ar' ? MONTHS_AR : MONTHS_EN;
   const now = new Date();
-  document.getElementById('dash-date').textContent = now.toLocaleDateString(lang==='ar'?'ar-SA-u-ca-gregory':'en-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('dash-date').textContent = now.toLocaleDateString(lang==='ar'?'ar-SA-u-ca-gregory':'en-SA-u-ca-gregory',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const active=employees.filter(e=>e.status==='active');
   const totalBase=active.reduce((s,e)=>s+Number(e.salary||0),0);
   const totalAllow=active.reduce((s,e)=>s+Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0),0);
@@ -1231,7 +1231,7 @@ function viewSlip(empId,month){
   const r=(payrollRecords[month]||{})[empId];
   if(!e||!r) return;
   const [yr,mo]=month.split('-');
-  const locale=lang==='ar'?'ar-SA-u-ca-gregory':'en-SA';
+  const locale=lang==='ar'?'ar-SA-u-ca-gregory':'en-SA-u-ca-gregory';
   const monthName=new Date(yr,parseInt(mo)-1,1).toLocaleString(locale,{month:'long',year:'numeric'});
   const gosiAmt=Number(e.salary||0)*((e.gosiEmp??9.75)/100);
   const commRows=(r.commBreakdown||[]).map(b=>`
@@ -1291,7 +1291,7 @@ function renderReports(){
   const months=Object.keys(payrollRecords).filter(m=>m.startsWith(year)).sort();
   const area=document.getElementById('reports-area');
   if(!months.length){area.innerHTML=`<div class="empty">${t('lbl_no_payroll_year')}</div>`;return;}
-  const locale=lang==='ar'?'ar-SA-u-ca-gregory':'en-SA';
+  const locale=lang==='ar'?'ar-SA-u-ca-gregory':'en-SA-u-ca-gregory';
   let html=`<div class="card" style="margin-bottom:20px;"><div class="card-header"><h3>${t('lbl_monthly_summary')} — ${year}</h3></div><div class="table-wrap"><table><thead><tr><th>${t('col_month')}</th><th>${t('col_employees')}</th><th>${t('col_total_gross')}</th><th>${t('nav_commission')}</th><th>${t('col_total_deductions')}</th><th>${t('col_total_net')}</th><th>${t('col_paid')}</th></tr></thead><tbody>`;
   months.forEach(m=>{
     const recs=payrollRecords[m]; let gross=0,ded=0,net=0,comm=0,count=0,paid=0;
