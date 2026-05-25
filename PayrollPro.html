@@ -192,6 +192,7 @@
   .field-label.amber { color:var(--amber); }
   .field-label.red { color:var(--red); }
   .cat-row { display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius); }
+  .ot-formula-card { background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px; }
 
   @media print {
     .sidebar,.page-header,nav,.modal-overlay,.payroll-summary { display:none!important; }
@@ -401,6 +402,7 @@
         <div class="form-group"><label data-i18n="field_status">Status</label>
           <select id="f-status"><option value="active" data-i18n="status_active">Active</option><option value="inactive" data-i18n="status_inactive">Inactive</option></select>
         </div>
+        <div class="form-group form-full"><label data-i18n="field_ot_formula">OT Formula</label><select id="f-ot-formula"></select></div>
         <div class="form-group form-full" style="border-top:1px solid var(--border);padding-top:14px;">
           <label style="color:var(--accent);font-weight:600;" data-i18n="field_commission">Commission</label>
         </div>
@@ -435,14 +437,14 @@
 
 <!-- OT Settings Modal -->
 <div class="modal-overlay" id="ot-modal">
-  <div class="modal" style="max-width:620px;">
+  <div class="modal" style="max-width:660px;">
     <div class="modal-header">
-      <h3 data-i18n="nav_ot_formula">OT Formula</h3>
+      <h3 data-i18n="nav_ot_formula">OT Formulas</h3>
       <button class="modal-close" onclick="closeOtSettings()">&times;</button>
     </div>
     <div class="modal-body">
-      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;" data-i18n="ot_desc">Define the formula used to calculate overtime pay. Must return the total OT amount in SAR.</div>
-      <div class="ot-formula-box">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;" data-i18n="ot_desc">Define formulas used to calculate overtime pay. Each must return the total OT amount in SAR. Assign a formula per employee.</div>
+      <div class="ot-formula-box" style="margin-bottom:16px;">
         <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;" data-i18n="ot_vars">Available Variables</div>
         <div class="ot-var-pills">
           <span class="ot-var-pill" onclick="insertVar('baseSalary')">baseSalary</span>
@@ -452,21 +454,17 @@
           <span class="ot-var-pill" onclick="insertVar('workDays')">workDays</span>
           <span class="ot-var-pill" onclick="insertVar('otMultiplier')">otMultiplier</span>
         </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+          <button class="btn btn-secondary btn-sm" onclick="setPreset('hourlyRate * otHours * otMultiplier')">Hourly × hrs × mult</button>
+          <button class="btn btn-secondary btn-sm" onclick="setPreset('(baseSalary / (workDays * 8)) * otHours * otMultiplier')">Full hourly</button>
+          <button class="btn btn-secondary btn-sm" onclick="setPreset('(baseSalary / 240) * otHours * otMultiplier')">Base/240 × OT</button>
+        </div>
       </div>
-      <div class="form-group" style="margin-bottom:12px;">
-        <label data-i18n="ot_multiplier">OT Rate Multiplier</label>
-        <input type="number" id="ot-multiplier" value="1.5" step="0.1" min="1" max="5" style="width:140px;" oninput="previewFormula()">
-      </div>
-      <div class="form-group" style="margin-bottom:12px;">
-        <label data-i18n="ot_formula_label">OT Formula</label>
-        <input type="text" id="ot-formula" class="formula-input" oninput="previewFormula()">
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-        <button class="btn btn-secondary btn-sm" onclick="setPreset('hourlyRate * otHours * otMultiplier')">Hourly × hrs × mult</button>
-        <button class="btn btn-secondary btn-sm" onclick="setPreset('(baseSalary / (workDays * 8)) * otHours * otMultiplier')">Full hourly</button>
-        <button class="btn btn-secondary btn-sm" onclick="setPreset('(baseSalary / 240) * otHours * otMultiplier')">Base/240 × OT</button>
-      </div>
-      <div class="formula-preview" id="ot-preview"></div>
+      <div id="ot-formula-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
+      <button class="btn btn-secondary" style="width:100%;justify-content:center;" onclick="addOtFormula()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span data-i18n="btn_add_ot_formula">Add Formula</span>
+      </button>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeOtSettings()" data-i18n="btn_cancel">Cancel</button>
@@ -585,6 +583,10 @@ const i18n = {
     msg_name_required:'Name is required',
     modal_add_emp:'Add Employee', modal_edit_emp:'Edit Employee',
     lbl_edit_ot:'Edit OT Formula',
+    field_ot_formula:'OT Formula',
+    btn_add_ot_formula:'Add Formula',
+    lbl_ot_formula_name:'Formula Name',
+    msg_ot_formula_name_required:'All formulas must have a name',
   },
   ar: {
     nav_dashboard:'لوحة التحكم', nav_employees:'الموظفون', nav_payroll:'الرواتب',
@@ -672,6 +674,10 @@ const i18n = {
     msg_name_required:'الاسم مطلوب',
     modal_add_emp:'إضافة موظف', modal_edit_emp:'تعديل الموظف',
     lbl_edit_ot:'تعديل معادلة الإضافي',
+    field_ot_formula:'معادلة الإضافي',
+    btn_add_ot_formula:'إضافة معادلة',
+    lbl_ot_formula_name:'اسم المعادلة',
+    msg_ot_formula_name_required:'يجب إدخال اسم لكل معادلة',
   }
 };
 
@@ -734,7 +740,7 @@ let payrollRecords = {};
 let attendanceRecords = {};
 let commissionRecords = {};
 let commissionCategories = [];
-let otSettings = { formula: 'hourlyRate * otHours * otMultiplier', multiplier: 1.5 };
+let otFormulas = [{ id: 'default', name: 'Default', formula: 'hourlyRate * otHours * otMultiplier', multiplier: 1.5 }];
 let editingEmpId = null;
 
 // ── Helpers ────────────────────────────────────────────
@@ -750,7 +756,11 @@ function getMonthVal(prefix) {
 
 // ── Persist ────────────────────────────────────────────
 function saveData() {
-  localStorage.setItem('payrollpro_v2', JSON.stringify({employees,payrollRecords,attendanceRecords,commissionRecords,commissionCategories,otSettings}));
+  localStorage.setItem('payrollpro_v2', JSON.stringify({employees,payrollRecords,attendanceRecords,commissionRecords,commissionCategories,otFormulas}));
+}
+function loadOtFormulas(d) {
+  if(d.otFormulas) { otFormulas=d.otFormulas; }
+  else if(d.otSettings) { otFormulas=[{id:'default',name:'Default',formula:d.otSettings.formula||'hourlyRate * otHours * otMultiplier',multiplier:d.otSettings.multiplier||1.5}]; }
 }
 function loadData() {
   try {
@@ -760,11 +770,11 @@ function loadData() {
     employees=d.employees||[]; payrollRecords=d.payrollRecords||{};
     attendanceRecords=d.attendanceRecords||{}; commissionRecords=d.commissionRecords||{};
     commissionCategories=d.commissionCategories||[];
-    if(d.otSettings) otSettings=d.otSettings;
+    loadOtFormulas(d);
   } catch(e){}
 }
 function exportData() {
-  const blob = new Blob([JSON.stringify({employees,payrollRecords,attendanceRecords,commissionRecords,commissionCategories,otSettings},null,2)],{type:'application/json'});
+  const blob = new Blob([JSON.stringify({employees,payrollRecords,attendanceRecords,commissionRecords,commissionCategories,otFormulas},null,2)],{type:'application/json'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='payrollpro_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
 }
@@ -777,7 +787,7 @@ function importData(ev) {
       employees=d.employees||[]; payrollRecords=d.payrollRecords||{};
       attendanceRecords=d.attendanceRecords||{}; commissionRecords=d.commissionRecords||{};
       commissionCategories=d.commissionCategories||[];
-      if(d.otSettings) otSettings=d.otSettings;
+      loadOtFormulas(d);
       saveData(); navigate('dashboard'); alert(t('msg_imported'));
     } catch { alert(t('msg_invalid_file')); }
   };
@@ -849,6 +859,10 @@ function openEmpModal(id=null) {
   document.getElementById('f-gosi-emp').value='9.75';
   document.getElementById('f-gosi-er').value='11.75';
   document.getElementById('f-status').value='active';
+  const otSel=document.getElementById('f-ot-formula');
+  otSel.innerHTML='';
+  otFormulas.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.name;otSel.appendChild(o);});
+  if(otFormulas.length) otSel.value=otFormulas[0].id;
   const catBox=document.getElementById('f-comm-cats');
   if(!commissionCategories.length){
     catBox.innerHTML=`<div style="font-size:12px;color:var(--text2);padding:8px;background:var(--bg3);border-radius:6px;">${t('lbl_no_commission')}</div>`;
@@ -877,6 +891,7 @@ function openEmpModal(id=null) {
       document.getElementById('f-join').value=e.joinDate||'';
       document.getElementById('f-status').value=e.status||'active';
       document.getElementById('f-notes').value=e.notes||'';
+      if(e.otFormulaId) document.getElementById('f-ot-formula').value=e.otFormulaId;
       (e.commissionCats||[]).forEach(catId=>{const cb=document.getElementById('fcat-'+catId);if(cb)cb.checked=true;});
     }
   }
@@ -902,6 +917,7 @@ function saveEmployee(){
     gosiEr:document.getElementById('f-gosi-er').value===''?11.75:parseFloat(document.getElementById('f-gosi-er').value),
     joinDate:document.getElementById('f-join').value,
     status:document.getElementById('f-status').value,
+    otFormulaId:document.getElementById('f-ot-formula')?.value||otFormulas[0]?.id||'',
     notes:document.getElementById('f-notes').value.trim(),
     commissionCats
   };
@@ -951,9 +967,10 @@ function renderEmployees(){
 // ── OT ────────────────────────────────────────────────
 function calcOT(emp,otHours,workDays){
   try{
-    const baseSalary=Number(emp.salary||0),otMultiplier=Number(otSettings.multiplier||1.5),wd=Number(workDays||22);
+    const f=otFormulas.find(x=>x.id===(emp.otFormulaId||''))||otFormulas[0]||{formula:'hourlyRate * otHours * otMultiplier',multiplier:1.5};
+    const baseSalary=Number(emp.salary||0),otMultiplier=Number(f.multiplier||1.5),wd=Number(workDays||22);
     const hourlyRate=baseSalary/(wd*8),dailyRate=baseSalary/wd;
-    const fn=new Function('baseSalary','hourlyRate','dailyRate','otHours','workDays','otMultiplier','return ('+otSettings.formula+')');
+    const fn=new Function('baseSalary','hourlyRate','dailyRate','otHours','workDays','otMultiplier','return ('+f.formula+')');
     const r=fn(baseSalary,hourlyRate,dailyRate,Number(otHours||0),wd,otMultiplier);
     return isNaN(r)||!isFinite(r)?0:Math.max(0,r);
   }catch{return 0;}
@@ -1079,7 +1096,6 @@ function renderAttendance(){
     <div class="card">
       <div class="card-header">
         <h3>${t('nav_attendance')} — ${month}</h3>
-        <span style="font-size:11px;color:var(--text2);">${t('lbl_ot')}: <code style="font-family:var(--mono);color:var(--accent);direction:ltr;">${otSettings.formula}</code></span>
         <button class="btn btn-secondary btn-sm" onclick="openOtSettings()">${t('lbl_edit_ot')}</button>
       </div>
       <div class="card-body">
@@ -1087,7 +1103,8 @@ function renderAttendance(){
           ${active.map(e=>`
             <div class="att-card">
               <div style="font-size:13px;font-weight:500;margin-bottom:3px;">${e.name}</div>
-              <div style="font-size:11px;color:var(--text2);margin-bottom:10px;">${e.dept||''}</div>
+              <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">${e.dept||''}</div>
+              <div style="font-size:11px;color:var(--accent);margin-bottom:8px;">${t('lbl_ot')}: ${(otFormulas.find(f=>f.id===e.otFormulaId)||otFormulas[0]||{name:'—'}).name}</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div><div class="field-label">${t('lbl_work_days')}</div><input class="inp" type="number" id="att-wd-${e.id}" value="${att[e.id]?.workDays??dd}" min="0" max="31"></div>
                 <div><div class="field-label">${t('lbl_absent_days')}</div><input class="inp" type="number" id="att-ab-${e.id}" value="${att[e.id]?.absentDays??0}" min="0" max="31"></div>
@@ -1308,28 +1325,87 @@ function renderReports(){
 }
 
 // ── OT Settings ────────────────────────────────────────
-function openOtSettings(){ document.getElementById('ot-formula').value=otSettings.formula; document.getElementById('ot-multiplier').value=otSettings.multiplier; previewFormula(); document.getElementById('ot-modal').classList.add('open'); }
+function openOtSettings(){ renderOtFormulaList(); document.getElementById('ot-modal').classList.add('open'); }
 function closeOtSettings(){ document.getElementById('ot-modal').classList.remove('open'); }
-function saveOtSettings(){
-  const formula=document.getElementById('ot-formula').value.trim();
-  const multiplier=parseFloat(document.getElementById('ot-multiplier').value)||1.5;
-  if(!formula){alert(t('msg_formula_empty'));return;}
-  try{new Function('baseSalary','hourlyRate','dailyRate','otHours','workDays','otMultiplier','return ('+formula+')')(10000,56.82,454,10,22,multiplier);}
-  catch(e){alert(t('msg_invalid_formula')+e.message);return;}
-  otSettings={formula,multiplier}; saveData(); closeOtSettings(); alert(t('msg_ot_saved'));
+
+function renderOtFormulaList(){
+  const list=document.getElementById('ot-formula-list');
+  list.innerHTML=otFormulas.map(f=>`
+    <div class="ot-formula-card">
+      <div style="display:flex;gap:10px;margin-bottom:10px;align-items:center;">
+        <input class="inp" type="text" id="otf-name-${f.id}" placeholder="${t('lbl_ot_formula_name')}" style="flex:2;font-weight:500;">
+        <label style="font-size:11px;color:var(--text2);white-space:nowrap;">${t('ot_multiplier')}</label>
+        <input class="inp" type="number" id="otf-mult-${f.id}" value="${f.multiplier}" min="1" max="5" step="0.1" style="width:70px;direction:ltr;" oninput="previewOtFormula('${f.id}')">
+        <button class="btn btn-danger btn-sm" onclick="removeOtFormula('${f.id}')" ${otFormulas.length<=1?'disabled':''}>✕</button>
+      </div>
+      <input type="text" class="formula-input" id="otf-formula-${f.id}" oninput="previewOtFormula('${f.id}')">
+      <div class="formula-preview" id="otf-preview-${f.id}" style="margin-top:10px;"></div>
+    </div>`).join('');
+  otFormulas.forEach(f=>{
+    const n=document.getElementById('otf-name-'+f.id);
+    const fm=document.getElementById('otf-formula-'+f.id);
+    if(n) n.value=f.name;
+    if(fm) fm.value=f.formula;
+    previewOtFormula(f.id);
+  });
 }
-function setPreset(f){ document.getElementById('ot-formula').value=f; previewFormula(); }
-function insertVar(v){ const inp=document.getElementById('ot-formula'),pos=inp.selectionStart,val=inp.value; inp.value=val.slice(0,pos)+v+val.slice(pos); inp.focus(); inp.selectionStart=inp.selectionEnd=pos+v.length; previewFormula(); }
-function previewFormula(){
-  const formula=document.getElementById('ot-formula').value.trim();
-  const mult=parseFloat(document.getElementById('ot-multiplier').value)||1.5;
-  const prev=document.getElementById('ot-preview');
+
+function addOtFormula(){
+  otFormulas.push({id:Date.now().toString(),name:'',formula:'hourlyRate * otHours * otMultiplier',multiplier:1.5});
+  renderOtFormulaList();
+}
+
+function removeOtFormula(id){
+  if(otFormulas.length<=1) return;
+  const fallback=otFormulas.find(f=>f.id!==id)?.id||'';
+  otFormulas=otFormulas.filter(f=>f.id!==id);
+  employees.forEach(e=>{if(e.otFormulaId===id) e.otFormulaId=fallback;});
+  renderOtFormulaList();
+}
+
+function previewOtFormula(id){
+  const formula=(document.getElementById('otf-formula-'+id)?.value||'').trim();
+  const mult=parseFloat(document.getElementById('otf-mult-'+id)?.value)||1.5;
+  const prev=document.getElementById('otf-preview-'+id);
+  if(!prev) return;
   if(!formula){prev.innerHTML=t('ot_desc');return;}
   try{
     const r=new Function('baseSalary','hourlyRate','dailyRate','otHours','workDays','otMultiplier','return ('+formula+')')(10000,10000/(22*8),10000/22,10,22,mult);
     if(isNaN(r)||!isFinite(r)) throw new Error('not a valid number');
     prev.innerHTML=`10,000 SAR · 22 ${t('lbl_work_days')} · 10h · ×${mult}: <span>${fmtD(r)} SAR</span>`;
   }catch(e){prev.innerHTML=`<span style="color:var(--red)">${t('msg_invalid_formula')} ${e.message}</span>`;}
+}
+
+function getActiveFormulaInput(){
+  const a=document.activeElement;
+  return (a&&a.classList.contains('formula-input'))?a:document.querySelector('.formula-input');
+}
+function setPreset(f){
+  const inp=getActiveFormulaInput(); if(!inp) return;
+  inp.value=f; inp.focus();
+  if(inp.id.startsWith('otf-formula-')) previewOtFormula(inp.id.slice('otf-formula-'.length));
+}
+function insertVar(v){
+  const inp=getActiveFormulaInput(); if(!inp) return;
+  const pos=inp.selectionStart,val=inp.value;
+  inp.value=val.slice(0,pos)+v+val.slice(pos);
+  inp.focus(); inp.selectionStart=inp.selectionEnd=pos+v.length;
+  if(inp.id.startsWith('otf-formula-')) previewOtFormula(inp.id.slice('otf-formula-'.length));
+}
+
+function saveOtSettings(){
+  const updated=[];
+  for(const f of otFormulas){
+    const name=(document.getElementById('otf-name-'+f.id)?.value||'').trim();
+    const formula=(document.getElementById('otf-formula-'+f.id)?.value||'').trim();
+    const multiplier=parseFloat(document.getElementById('otf-mult-'+f.id)?.value)||1.5;
+    if(!name){alert(t('msg_ot_formula_name_required'));return;}
+    if(!formula){alert(t('msg_formula_empty'));return;}
+    try{new Function('baseSalary','hourlyRate','dailyRate','otHours','workDays','otMultiplier','return ('+formula+')')(10000,56.82,454,10,22,multiplier);}
+    catch(e){alert(t('msg_invalid_formula')+e.message);return;}
+    updated.push({id:f.id,name,formula,multiplier});
+  }
+  otFormulas=updated; saveData(); closeOtSettings(); alert(t('msg_ot_saved'));
 }
 
 // ── Commission Categories ──────────────────────────────
