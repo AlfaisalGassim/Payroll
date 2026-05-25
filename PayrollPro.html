@@ -1010,21 +1010,22 @@ function processPayroll(force=false){
     const additions=att[e.id]?.additions??0;
     const extraDed=att[e.id]?.deductions??0;
     const otHours=att[e.id]?.otHours??0;
-    const dailyRate=Number(e.salary||0)/workDays;
+    const dailyRate=Number(e.salary||0)/dd;
+    const proratedBase=dailyRate*workDays;
     const absentDed=dailyRate*absentDays;
     const gosiDed=Number(e.salary||0)*((e.gosiEmp??9.75)/100);
     const totalDed=absentDed+gosiDed+extraDed;
-    const otPay=calcOT(e,otHours,workDays);
+    const otPay=calcOT(e,otHours,dd);
     const {total:commPay,breakdown:commBreakdown}=calcCommission(e,month);
     const allowances=Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0)+Number(additions);
-    const gross=Number(e.salary||0)+allowances+otPay+commPay;
+    const gross=proratedBase+allowances+otPay+commPay;
     const net=gross-totalDed;
     if(!existing[e.id]||force){
       payrollRecords[month][e.id]={
         status:force?(existing[e.id]?.status||'pending'):'pending',
         paidAt:force?(existing[e.id]?.paidAt||null):null,
         workDays,absentDays,additions,extraDed,otHours,otPay,commPay,commBreakdown,
-        absentDed,gosiDed,totalDed,allowances,gross,net,
+        dailyRate,proratedBase,absentDed,gosiDed,totalDed,allowances,gross,net,
         processedAt:new Date().toISOString()
       };
     }
@@ -1106,16 +1107,21 @@ function renderAttendance(){
               <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">${e.dept||''}</div>
               <div style="font-size:11px;color:var(--accent);margin-bottom:8px;">${t('lbl_ot')}: ${(otFormulas.find(f=>f.id===e.otFormulaId)||otFormulas[0]||{name:'—'}).name}</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <div><div class="field-label">${t('lbl_work_days')}</div><input class="inp" type="number" id="att-wd-${e.id}" value="${att[e.id]?.workDays??dd}" min="0" max="31"></div>
-                <div><div class="field-label">${t('lbl_absent_days')}</div><input class="inp" type="number" id="att-ab-${e.id}" value="${att[e.id]?.absentDays??0}" min="0" max="31"></div>
-                <div><div class="field-label amber">${t('lbl_ot_hours')}</div><input class="inp inp-amber" type="number" id="att-ot-${e.id}" value="${att[e.id]?.otHours??0}" min="0" step="0.5"></div>
-                <div><div class="field-label green">${t('lbl_additions')}</div><input class="inp inp-green" type="number" id="att-add-${e.id}" value="${att[e.id]?.additions??0}" min="0"></div>
-                <div style="grid-column:1/-1;"><div class="field-label red">${t('lbl_extra_deductions')}</div><input class="inp inp-red" type="number" id="att-ded-${e.id}" value="${att[e.id]?.deductions??0}" min="0"></div>
+                <div><div class="field-label">${t('lbl_work_days')}</div><input class="inp" type="number" id="att-wd-${e.id}" value="${att[e.id]?.workDays??dd}" min="0" max="31" oninput="updateAttPreview('${e.id}')"></div>
+                <div><div class="field-label">${t('lbl_absent_days')}</div><input class="inp" type="number" id="att-ab-${e.id}" value="${att[e.id]?.absentDays??0}" min="0" max="31" oninput="updateAttPreview('${e.id}')"></div>
+                <div><div class="field-label amber">${t('lbl_ot_hours')}</div><input class="inp inp-amber" type="number" id="att-ot-${e.id}" value="${att[e.id]?.otHours??0}" min="0" step="0.5" oninput="updateAttPreview('${e.id}')"></div>
+                <div><div class="field-label green">${t('lbl_additions')}</div><input class="inp inp-green" type="number" id="att-add-${e.id}" value="${att[e.id]?.additions??0}" min="0" oninput="updateAttPreview('${e.id}')"></div>
+                <div style="grid-column:1/-1;"><div class="field-label red">${t('lbl_extra_deductions')}</div><input class="inp inp-red" type="number" id="att-ded-${e.id}" value="${att[e.id]?.deductions??0}" min="0" oninput="updateAttPreview('${e.id}')"></div>
+              </div>
+              <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:11px;color:var(--text2);">${t('lbl_net_pay')}</div>
+                <div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--green);" id="att-preview-${e.id}">—</div>
               </div>
             </div>`).join('')}
         </div>
       </div>
     </div>`;
+  active.forEach(e=>updateAttPreview(e.id));
 }
 
 function saveAttendance(){
@@ -1132,6 +1138,28 @@ function saveAttendance(){
     };
   });
   saveData(); alert(t('msg_save_att'));
+}
+
+function updateAttPreview(empId){
+  const e=employees.find(x=>x.id===empId); if(!e) return;
+  const month=getMonthVal('att-month'); if(!month) return;
+  const dd=daysInMonth(month);
+  const workDays=parseFloat(document.getElementById('att-wd-'+empId)?.value)??dd;
+  const absentDays=parseFloat(document.getElementById('att-ab-'+empId)?.value)||0;
+  const otHours=parseFloat(document.getElementById('att-ot-'+empId)?.value)||0;
+  const additions=parseFloat(document.getElementById('att-add-'+empId)?.value)||0;
+  const extraDed=parseFloat(document.getElementById('att-ded-'+empId)?.value)||0;
+  const dailyRate=Number(e.salary||0)/dd;
+  const proratedBase=dailyRate*workDays;
+  const absentDed=dailyRate*absentDays;
+  const gosiDed=Number(e.salary||0)*((e.gosiEmp??9.75)/100);
+  const otPay=calcOT(e,otHours,dd);
+  const {total:commPay}=calcCommission(e,month);
+  const allowances=Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0)+additions;
+  const gross=proratedBase+allowances+otPay+commPay;
+  const net=gross-(absentDed+gosiDed+extraDed);
+  const el=document.getElementById('att-preview-'+empId);
+  if(el) el.textContent=fmt(net)+' SAR';
 }
 
 // ── Commission page ────────────────────────────────────
@@ -1212,7 +1240,7 @@ function saveCommission(){
       const rec=payrollRecords[month][e.id];
       if(!rec||rec.status==='paid') return;
       const {total:commPay,breakdown:commBreakdown}=calcCommission(e,month);
-      const gross=Number(e.salary||0)+(rec.allowances||0)+(rec.otPay||0)+commPay;
+      const gross=(rec.proratedBase??Number(e.salary||0))+(rec.allowances||0)+(rec.otPay||0)+commPay;
       const net=gross-(rec.totalDed||0);
       payrollRecords[month][e.id]={...rec,commPay,commBreakdown,gross,net};
     });
@@ -1273,7 +1301,7 @@ function viewSlip(empId,month){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
         <div class="payslip-section">
           <h4>${t('lbl_earnings')}</h4>
-          <div class="payslip-row"><span>${t('lbl_base')}</span><span>${fmt(e.salary)} SAR</span></div>
+          <div class="payslip-row"><span>${t('lbl_base')}${r.workDays<daysInMonth(month)?` (${r.workDays}/${daysInMonth(month)} ${t('lbl_work_days')})`:''}</span><span>${fmt(r.proratedBase??e.salary)} SAR</span></div>
           <div class="payslip-row"><span>${t('lbl_housing')}</span><span>${fmt(e.housing)} SAR</span></div>
           <div class="payslip-row"><span>${t('lbl_transport')}</span><span>${fmt(e.transport)} SAR</span></div>
           ${Number(e.other)>0?`<div class="payslip-row"><span>${t('lbl_other')}</span><span>${fmt(e.other)} SAR</span></div>`:''}
