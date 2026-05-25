@@ -104,6 +104,8 @@
   .search-bar input:focus { border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
   .search-bar svg { position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3); }
   html[lang="ar"] .search-bar svg { left:auto;right:10px; }
+  .filter-row { display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
+  html[lang="ar"] .search-bar svg { left:auto;right:10px; }
 
   /* ── Forms ── */
   .form-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
@@ -331,7 +333,14 @@
       <div class="card">
         <div class="card-header">
           <h3 data-i18n="payroll_register">Payroll Register</h3>
-          <select class="select-sm" id="payroll-status-filter" onchange="renderPayroll()"></select>
+          <div class="filter-row">
+            <div class="search-bar">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="payroll-search" data-i18n="lbl_search" oninput="renderPayroll()">
+            </div>
+            <select class="select-sm" id="payroll-dept-filter" onchange="renderPayroll()"><option value=""></option></select>
+            <select class="select-sm" id="payroll-status-filter" onchange="renderPayroll()"></select>
+          </div>
         </div>
         <div class="table-wrap"><table><thead><tr id="payroll-thead"></tr></thead><tbody id="payroll-tbody"></tbody></table></div>
         <div class="payroll-summary" id="payroll-summary"></div>
@@ -346,6 +355,17 @@
           <select class="select-sm" id="att-month-m" onchange="syncMonth('att-month');renderAttendance()"></select>
           <select class="select-sm" id="att-month-y" onchange="syncMonth('att-month');renderAttendance()"></select>
           <button class="btn btn-primary" onclick="saveAttendance()"><span data-i18n="btn_save_attendance">Save Attendance</span></button>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header" style="padding:10px 16px;">
+          <div class="filter-row">
+            <div class="search-bar">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="att-search" data-i18n="lbl_search" oninput="renderAttendance()">
+            </div>
+            <select class="select-sm" id="att-dept-filter" onchange="renderAttendance()"><option value=""></option></select>
+          </div>
         </div>
       </div>
       <div id="att-grid-wrap"></div>
@@ -372,6 +392,18 @@
           <select class="select-sm" id="slip-month-m" onchange="syncMonth('slip-month')"></select>
           <select class="select-sm" id="slip-month-y" onchange="syncMonth('slip-month')"></select>
           <button class="btn btn-secondary" onclick="renderPayslipList()"><span data-i18n="btn_load">Load</span></button>
+        </div>
+      </div>
+      <div id="slip-filter-bar" class="card" style="margin-bottom:16px;display:none;">
+        <div class="card-header" style="padding:10px 16px;">
+          <div class="filter-row">
+            <div class="search-bar">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="slip-search" data-i18n="lbl_search" oninput="renderPayslipList()">
+            </div>
+            <select class="select-sm" id="slip-dept-filter" onchange="renderPayslipList()"><option value=""></option></select>
+            <select class="select-sm" id="slip-status-filter" onchange="renderPayslipList()"></select>
+          </div>
         </div>
       </div>
       <div id="payslip-area"></div>
@@ -1059,7 +1091,13 @@ function processPayroll(force=false){
 function renderPayroll(){
   const month=getMonthVal('payroll-month');
   updatePayrollStatusFilter();
+  // dept filter — preserve + rebuild
+  const deptSel=document.getElementById('payroll-dept-filter');
+  const df=deptSel?.value||'';
+  const payDepts=[...new Set(employees.filter(e=>e.status==='active'&&e.dept).map(e=>e.dept))].sort();
+  if(deptSel) deptSel.innerHTML=`<option value="">${t('lbl_all_depts')}</option>`+payDepts.map(d=>`<option value="${d}" ${d===df?'selected':''}>${d}</option>`).join('');
   const sf=document.getElementById('payroll-status-filter').value;
+  const search=(document.getElementById('payroll-search')?.value||'').toLowerCase();
   const records=payrollRecords[month]||{};
   const hasRec=Object.keys(records).length>0;
   document.getElementById('btn-process').style.display=hasRec?'none':'inline-flex';
@@ -1072,7 +1110,11 @@ function renderPayroll(){
     document.getElementById('payroll-summary').innerHTML=''; return;
   }
   let tGross=0,tNet=0,tDed=0,tOT=0,tComm=0,count=0;
-  const rows=activeEmps.filter(e=>records[e.id]&&(!sf||records[e.id].status===sf));
+  const rows=activeEmps.filter(e=>records[e.id]
+    &&(!sf||records[e.id].status===sf)
+    &&(!df||e.dept===df)
+    &&(!search||e.name.toLowerCase().includes(search)||(e.empId||'').toLowerCase().includes(search))
+  );
   tbody.innerHTML=rows.map(e=>{
     const r=records[e.id];
     tGross+=r.gross;tNet+=r.net;tDed+=r.totalDed;tOT+=r.otPay||0;tComm+=r.commPay||0;count++;
@@ -1112,9 +1154,18 @@ function markPaid(month,empId){
 // ── Attendance ─────────────────────────────────────────
 function renderAttendance(){
   const month=getMonthVal('att-month');
+  // dept filter — preserve + rebuild
+  const attDeptSel=document.getElementById('att-dept-filter');
+  const df=attDeptSel?.value||'';
+  const attDepts=[...new Set(employees.filter(e=>e.status==='active'&&e.dept).map(e=>e.dept))].sort();
+  if(attDeptSel) attDeptSel.innerHTML=`<option value="">${t('lbl_all_depts')}</option>`+attDepts.map(d=>`<option value="${d}" ${d===df?'selected':''}>${d}</option>`).join('');
+  const search=(document.getElementById('att-search')?.value||'').toLowerCase();
   if(!month){document.getElementById('att-grid-wrap').innerHTML=`<div class="empty">${t('lbl_select_month')}</div>`;return;}
   const att=attendanceRecords[month]||{};
-  const active=employees.filter(e=>e.status==='active');
+  const active=employees.filter(e=>e.status==='active'
+    &&(!df||e.dept===df)
+    &&(!search||e.name.toLowerCase().includes(search)||(e.empId||'').toLowerCase().includes(search))
+  );
   const dd=daysInMonth(month);
   document.getElementById('att-grid-wrap').innerHTML=`
     <div class="card">
@@ -1275,11 +1326,33 @@ function saveCommission(){
 function renderPayslipList(){
   const month=getMonthVal('slip-month');
   const area=document.getElementById('payslip-area');
-  if(!month){area.innerHTML=`<div class="empty">${t('lbl_select_month')}</div>`;return;}
+  const filterBar=document.getElementById('slip-filter-bar');
+  if(!month){
+    if(filterBar) filterBar.style.display='none';
+    area.innerHTML=`<div class="empty">${t('lbl_select_month')}</div>`;return;
+  }
   const records=payrollRecords[month]||{};
-  const active=employees.filter(e=>e.status==='active'&&records[e.id]);
-  if(!active.length){area.innerHTML=`<div class="empty">${t('lbl_process_first')}</div>`;return;}
-  area.innerHTML=`<div class="card"><div class="card-header"><h3>${t('nav_payslips')} — ${month}</h3></div><div class="table-wrap"><table>
+  const baseActive=employees.filter(e=>e.status==='active'&&records[e.id]);
+  if(!baseActive.length){
+    if(filterBar) filterBar.style.display='none';
+    area.innerHTML=`<div class="empty">${t('lbl_process_first')}</div>`;return;
+  }
+  // show filter bar and populate options
+  if(filterBar) filterBar.style.display='block';
+  const slipDeptSel=document.getElementById('slip-dept-filter');
+  const df=slipDeptSel?.value||'';
+  const slipDepts=[...new Set(baseActive.filter(e=>e.dept).map(e=>e.dept))].sort();
+  if(slipDeptSel) slipDeptSel.innerHTML=`<option value="">${t('lbl_all_depts')}</option>`+slipDepts.map(d=>`<option value="${d}" ${d===df?'selected':''}>${d}</option>`).join('');
+  const slipStatSel=document.getElementById('slip-status-filter');
+  const sf=slipStatSel?.value||'';
+  if(slipStatSel){const cur=slipStatSel.value;slipStatSel.innerHTML=`<option value="">${t('lbl_all')}</option><option value="pending">${t('lbl_pending')}</option><option value="paid">${t('lbl_paid')}</option>`;slipStatSel.value=cur;}
+  const search=(document.getElementById('slip-search')?.value||'').toLowerCase();
+  const active=baseActive.filter(e=>
+    (!df||e.dept===df)
+    &&(!sf||records[e.id].status===sf)
+    &&(!search||e.name.toLowerCase().includes(search)||(e.empId||'').toLowerCase().includes(search))
+  );
+  area.innerHTML=`<div class="card"><div class="card-header"><h3>${t('nav_payslips')} — ${month}</h3><span style="font-size:12px;color:var(--text2);">${active.length} / ${baseActive.length}</span></div><div class="table-wrap"><table>
     <thead><tr><th>${t('col_emp')}</th><th>${t('col_dept')}</th><th>${t('col_gross')}</th><th>${t('col_commission')}</th><th>${t('col_deductions')}</th><th>${t('col_net')}</th><th>${t('col_status')}</th><th></th></tr></thead>
     <tbody>${active.map(e=>{const r=records[e.id];return`<tr>
       <td><div style="font-weight:500">${e.name}</div><div style="font-size:11px;color:var(--text2)">${e.empId||''}</div></td>
