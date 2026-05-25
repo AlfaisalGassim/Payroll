@@ -307,8 +307,8 @@
       <div class="page-header">
         <div><h2 data-i18n="nav_payroll">Payroll</h2><p data-i18n="desc_payroll">Process monthly payroll for all active employees</p></div>
         <div class="month-selector">
-          <select class="select-sm" id="payroll-month-m" onchange="renderPayroll()"></select>
-          <select class="select-sm" id="payroll-month-y" onchange="renderPayroll()"></select>
+          <select class="select-sm" id="payroll-month-m" onchange="syncMonth('payroll-month');renderPayroll()"></select>
+          <select class="select-sm" id="payroll-month-y" onchange="syncMonth('payroll-month');renderPayroll()"></select>
           <button class="btn btn-secondary" id="btn-regen" onclick="processPayroll(true)" style="display:none;">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             <span data-i18n="btn_regenerate">Regenerate</span>
@@ -331,8 +331,8 @@
       <div class="page-header">
         <div><h2 data-i18n="nav_attendance">Attendance</h2><p data-i18n="desc_attendance">Track days worked and apply deductions per employee</p></div>
         <div class="month-selector">
-          <select class="select-sm" id="att-month-m" onchange="renderAttendance()"></select>
-          <select class="select-sm" id="att-month-y" onchange="renderAttendance()"></select>
+          <select class="select-sm" id="att-month-m" onchange="syncMonth('att-month');renderAttendance()"></select>
+          <select class="select-sm" id="att-month-y" onchange="syncMonth('att-month');renderAttendance()"></select>
           <button class="btn btn-primary" onclick="saveAttendance()"><span data-i18n="btn_save_attendance">Save Attendance</span></button>
         </div>
       </div>
@@ -344,8 +344,8 @@
       <div class="page-header">
         <div><h2 data-i18n="nav_commission">Commission</h2><p data-i18n="desc_commission">Enter monthly sales per employee and category</p></div>
         <div class="month-selector">
-          <select class="select-sm" id="comm-month-m" onchange="renderCommission()"></select>
-          <select class="select-sm" id="comm-month-y" onchange="renderCommission()"></select>
+          <select class="select-sm" id="comm-month-m" onchange="syncMonth('comm-month');renderCommission()"></select>
+          <select class="select-sm" id="comm-month-y" onchange="syncMonth('comm-month');renderCommission()"></select>
           <button class="btn btn-primary" onclick="saveCommission()"><span data-i18n="btn_save_commission">Save Commission</span></button>
         </div>
       </div>
@@ -357,8 +357,8 @@
       <div class="page-header">
         <div><h2 data-i18n="nav_payslips">Payslips</h2><p data-i18n="desc_payslips">Generate and print employee payslips</p></div>
         <div class="month-selector">
-          <select class="select-sm" id="slip-month-m"></select>
-          <select class="select-sm" id="slip-month-y"></select>
+          <select class="select-sm" id="slip-month-m" onchange="syncMonth('slip-month')"></select>
+          <select class="select-sm" id="slip-month-y" onchange="syncMonth('slip-month')"></select>
           <button class="btn btn-secondary" onclick="renderPayslipList()"><span data-i18n="btn_load">Load</span></button>
         </div>
       </div>
@@ -1371,6 +1371,20 @@ function saveCatSettings(){
 }
 
 // ── Init ───────────────────────────────────────────────
+const MONTH_PREFIXES=['payroll-month','att-month','slip-month','comm-month'];
+function syncMonth(sourcePrefix){
+  const m=document.getElementById(sourcePrefix+'-m')?.value;
+  const y=document.getElementById(sourcePrefix+'-y')?.value;
+  if(!m||!y) return;
+  MONTH_PREFIXES.forEach(prefix=>{
+    if(prefix===sourcePrefix) return;
+    const ms=document.getElementById(prefix+'-m');
+    const ys=document.getElementById(prefix+'-y');
+    if(ms) ms.value=m;
+    if(ys) ys.value=y;
+  });
+}
+
 function initYearSelector(){
   const sel=document.getElementById('report-year'),cur=new Date().getFullYear();
   for(let y=cur;y>=cur-4;y--) sel.innerHTML+=`<option value="${y}">${y}</option>`;
