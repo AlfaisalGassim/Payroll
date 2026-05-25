@@ -202,6 +202,7 @@
     #slip-modal.open .modal-header { display:none!important; }
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -280,10 +281,21 @@
     <div class="page" id="page-employees">
       <div class="page-header">
         <div><h2 data-i18n="nav_employees">Employees</h2><p id="emp-count-label"></p></div>
-        <button class="btn btn-primary" onclick="openEmpModal()">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span data-i18n="btn_add_employee">Add Employee</span>
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-secondary" onclick="downloadEmployeeTemplate()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span data-i18n="btn_download_template">Download Template</span>
+          </button>
+          <label class="btn btn-secondary" style="cursor:pointer;margin:0;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10" transform="rotate(180 12 12)"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span data-i18n="btn_import_employees">Import Employees</span>
+            <input type="file" accept=".xlsx,.xls" style="display:none" onchange="importEmployees(event)">
+          </label>
+          <button class="btn btn-primary" onclick="openEmpModal()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span data-i18n="btn_add_employee">Add Employee</span>
+          </button>
+        </div>
       </div>
       <div class="card">
         <div class="card-header">
@@ -586,6 +598,12 @@ const i18n = {
     btn_add_ot_formula:'Add Formula',
     lbl_ot_formula_name:'Formula Name',
     msg_ot_formula_name_required:'All formulas must have a name',
+    btn_import_employees:'Import Employees',
+    btn_download_template:'Download Template',
+    msg_import_confirm:'Import {n} employee(s)? Existing employees with the same ID will be updated.',
+    msg_import_done:'Imported {n} new, updated {u} existing employee(s).',
+    msg_import_no_data:'No valid employee rows found in the file.',
+    msg_import_error:'Error reading file. Make sure it is a valid Excel file.',
   },
   ar: {
     nav_dashboard:'لوحة التحكم', nav_employees:'الموظفون', nav_payroll:'الرواتب',
@@ -677,6 +695,12 @@ const i18n = {
     btn_add_ot_formula:'إضافة معادلة',
     lbl_ot_formula_name:'اسم المعادلة',
     msg_ot_formula_name_required:'يجب إدخال اسم لكل معادلة',
+    btn_import_employees:'استيراد موظفين',
+    btn_download_template:'تنزيل النموذج',
+    msg_import_confirm:'استيراد {n} موظف(ين)؟ سيتم تحديث الموظفين الموجودين بنفس الرقم.',
+    msg_import_done:'تم استيراد {n} جديد وتحديث {u} موجود.',
+    msg_import_no_data:'لم يتم العثور على صفوف موظفين صالحة في الملف.',
+    msg_import_error:'خطأ في قراءة الملف. تأكد أنه ملف Excel صالح.',
   }
 };
 
@@ -1505,6 +1529,129 @@ function initMonthDropdowns(update=false){
     months.forEach((name,i)=>ms.innerHTML+=`<option value="${String(i+1).padStart(2,'0')}" ${String(i+1).padStart(2,'0')===curMVal?'selected':''}>${name}</option>`);
     for(let y=curY+1;y>=curY-5;y--) ys.innerHTML+=`<option value="${y}" ${String(y)===curYVal?'selected':''}>${y}</option>`;
   });
+}
+
+function downloadEmployeeTemplate(){
+  const headers=[
+    'Full Name','Employee ID','Department','Position',
+    'Base Salary (SAR)','Housing Allowance (SAR)','Transport Allowance (SAR)','Other Allowance (SAR)',
+    'GOSI Employee %','GOSI Employer %','Join Date (YYYY-MM-DD)','Status (active/inactive)',
+    'OT Formula Name','Commission Categories (comma-separated)','Notes'
+  ];
+  const example=[
+    'Ahmed Al-Rashid','EMP001','Sales','Sales Manager',
+    15000,2000,1000,500,
+    9.75,11.75,'2023-01-15','active',
+    'Default','Category A, Category B','Example employee'
+  ];
+  const ws=XLSX.utils.aoa_to_sheet([headers,example]);
+  ws['!cols']=headers.map((_,i)=>({wch:i<4?22:i===13?30:18}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Employees');
+  XLSX.writeFile(wb,'employee_import_template.xlsx');
+}
+
+function importEmployees(event){
+  const file=event.target.files[0];
+  event.target.value='';
+  if(!file){return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){alert(t('msg_import_no_data'));return;}
+
+      // normalise header keys: lowercase, strip special chars/spaces
+      function norm(s){return String(s||'').toLowerCase().replace(/[^a-z]/g,'');}
+      const COL={
+        name:['fullname','name'],
+        empId:['employeeid','empid','id'],
+        dept:['department','dept'],
+        position:['position'],
+        salary:['basesalarysar','basesalary','salary'],
+        housing:['housingallowancesar','housingallowance','housing'],
+        transport:['transportallowancesar','transportallowance','transport'],
+        other:['otherallowancesar','otherallowance','other'],
+        gosiEmp:['gosiemployee','gosiemp','gosiemployee'],
+        gosiEr:['gosiemployer','gosier','gosiemployer'],
+        joinDate:['joindate','joindateyyyymmdd'],
+        status:['statusactiveinactive','status'],
+        otFormula:['otformulaname','otformula'],
+        commCats:['commissioncategoriescommaseparated','commissioncategories','commcats'],
+        notes:['notes'],
+      };
+      function getVal(row,field){
+        const aliases=COL[field]||[];
+        for(const key of Object.keys(row)){
+          if(aliases.includes(norm(key)))return row[key];
+        }
+        return '';
+      }
+
+      const toImport=rows.map(row=>{
+        const name=String(getVal(row,'name')||'').trim();
+        if(!name)return null;
+        const empId=String(getVal(row,'empId')||'').trim()||('IMP-'+Date.now()+'-'+Math.random().toString(36).slice(2,6));
+        const statusRaw=String(getVal(row,'status')||'').toLowerCase().trim();
+        const status=statusRaw==='inactive'?'inactive':'active';
+        const otFormulaName=String(getVal(row,'otFormula')||'').trim();
+        const otFormulaId=otFormulaName
+          ?(otFormulas.find(f=>f.name.toLowerCase()===otFormulaName.toLowerCase())?.id||otFormulas[0]?.id||'default')
+          :(otFormulas[0]?.id||'default');
+        const commCatNames=String(getVal(row,'commCats')||'').split(',').map(s=>s.trim()).filter(Boolean);
+        const assignedCats=commCatNames.length
+          ?commCatNames.map(n=>commissionCategories.find(c=>c.name.toLowerCase()===n.toLowerCase())?.id).filter(Boolean)
+          :[];
+        const joinDateRaw=getVal(row,'joinDate');
+        let joinDate='';
+        if(joinDateRaw instanceof Date){joinDate=joinDateRaw.toISOString().slice(0,10);}
+        else if(joinDateRaw){
+          const s=String(joinDateRaw).trim();
+          if(/^\d{4}-\d{2}-\d{2}$/.test(s))joinDate=s;
+        }
+        return{
+          name,empId,
+          dept:String(getVal(row,'dept')||'').trim(),
+          position:String(getVal(row,'position')||'').trim(),
+          salary:parseFloat(getVal(row,'salary'))||0,
+          housing:parseFloat(getVal(row,'housing'))||0,
+          transport:parseFloat(getVal(row,'transport'))||0,
+          other:parseFloat(getVal(row,'other'))||0,
+          gosiEmp:parseFloat(getVal(row,'gosiEmp'))||9.75,
+          gosiEr:parseFloat(getVal(row,'gosiEr'))||11.75,
+          joinDate,status,otFormulaId,
+          commissionCats:assignedCats,
+          notes:String(getVal(row,'notes')||'').trim(),
+        };
+      }).filter(Boolean);
+
+      if(!toImport.length){alert(t('msg_import_no_data'));return;}
+
+      const confirmMsg=t('msg_import_confirm').replace('{n}',toImport.length);
+      if(!confirm(confirmMsg))return;
+
+      let added=0,updated=0;
+      toImport.forEach(imp=>{
+        const idx=employees.findIndex(e=>e.empId===imp.empId);
+        if(idx>=0){
+          employees[idx]={...employees[idx],...imp};
+          updated++;
+        }else{
+          employees.push({...imp,id:'e'+Date.now()+Math.random().toString(36).slice(2,6)});
+          added++;
+        }
+      });
+      saveData();
+      renderEmployees();
+      alert(t('msg_import_done').replace('{n}',added).replace('{u}',updated));
+    }catch(err){
+      console.error(err);
+      alert(t('msg_import_error'));
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 loadData();
