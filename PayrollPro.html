@@ -1619,6 +1619,8 @@ function downloadEmployeeTemplate(){
   ];
   const ws=XLSX.utils.aoa_to_sheet([headers,example]);
   ws['!cols']=headers.map((_,i)=>({wch:i<4?22:i===13?30:18}));
+  // force GOSI cells (I2, J2 = indices 8,9) to plain number format so Excel won't treat them as %
+  ['I2','J2'].forEach(ref=>{if(ws[ref])ws[ref].z='0.00';});
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Employees');
   XLSX.writeFile(wb,'employee_import_template.xlsx');
@@ -1684,6 +1686,8 @@ function importEmployees(event){
           const s=String(joinDateRaw).trim();
           if(/^\d{4}-\d{2}-\d{2}$/.test(s))joinDate=s;
         }
+        // handle both direct (9.75) and decimal-fraction (0.0975) percent notation
+        function parsePct(v,def){const n=parseFloat(v);if(isNaN(n))return def;return(n>0&&n<1)?Math.round(n*10000)/100:n;}
         return{
           name,empId,
           dept:String(getVal(row,'dept')||'').trim(),
@@ -1692,8 +1696,8 @@ function importEmployees(event){
           housing:parseFloat(getVal(row,'housing'))||0,
           transport:parseFloat(getVal(row,'transport'))||0,
           other:parseFloat(getVal(row,'other'))||0,
-          gosiEmp:parseFloat(getVal(row,'gosiEmp'))||9.75,
-          gosiEr:parseFloat(getVal(row,'gosiEr'))||11.75,
+          gosiEmp:parsePct(getVal(row,'gosiEmp'),9.75),
+          gosiEr:parsePct(getVal(row,'gosiEr'),11.75),
           joinDate,status,otFormulaId,
           commissionCats:assignedCats,
           notes:String(getVal(row,'notes')||'').trim(),
