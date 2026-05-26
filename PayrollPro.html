@@ -675,6 +675,9 @@ const i18n = {
     lbl_sales_or_units:'Enter sales value (SAR) or units per category',
     lbl_pct_of_value:'% of value', lbl_sar_unit:'SAR / unit',
     lbl_no_payroll_year:'No payroll records for this year',
+    msg_confirm_paid:'Mark this salary as paid? This cannot be undone.',
+    msg_confirm_inc_paid:'Mark OT & Commission as paid? This cannot be undone.',
+    msg_confirm_irreversible:'Once marked paid, base salary fields will be locked.',
     msg_delete_emp:'Delete this employee?',
     msg_cannot_delete_emp:'This employee has at least one paid payroll record and cannot be deleted. Set them to Inactive instead.',
     msg_save_att:'Attendance saved!', msg_save_comm:'Commission saved!',
@@ -781,6 +784,9 @@ const i18n = {
     lbl_sales_or_units:'أدخل قيمة المبيعات (ر.س) أو عدد الوحدات لكل فئة',
     lbl_pct_of_value:'% من القيمة', lbl_sar_unit:'ر.س / وحدة',
     lbl_no_payroll_year:'لا توجد سجلات رواتب لهذا العام',
+    msg_confirm_paid:'تأكيد تسجيل الراتب كمدفوع؟ لا يمكن التراجع عن هذا الإجراء.',
+    msg_confirm_inc_paid:'تأكيد دفع الإضافي والعمولة؟ لا يمكن التراجع عن هذا الإجراء.',
+    msg_confirm_irreversible:'بعد التأكيد، سيتم قفل حقول الراتب الأساسي.',
     msg_delete_emp:'حذف هذا الموظف؟',
     msg_cannot_delete_emp:'لا يمكن حذف هذا الموظف لوجود راتب مدفوع مسجّل باسمه. يمكنك تعيينه كـ "غير نشط" عوضاً عن ذلك.',
     msg_save_att:'تم حفظ الحضور!', msg_save_comm:'تم حفظ العمولة!',
@@ -1329,18 +1335,24 @@ function renderIncentives(){
 }
 
 function markPaid(month,empId){
-  if(payrollRecords[month]?.[empId]){
-    payrollRecords[month][empId].status='paid';
-    payrollRecords[month][empId].paidAt=new Date().toISOString();
-    saveData(); renderPayroll();
-  }
+  const e=employees.find(x=>x.id===empId);
+  const r=payrollRecords[month]?.[empId];
+  if(!r) return;
+  const name=e?.name||empId;
+  if(!confirm(`${t('msg_confirm_paid')}\n\n${name} — ${fmt(r.net)} SAR\n\n${t('msg_confirm_irreversible')}`)) return;
+  payrollRecords[month][empId].status='paid';
+  payrollRecords[month][empId].paidAt=new Date().toISOString();
+  saveData(); renderPayroll();
 }
 function markIncentivePaid(month,empId){
-  if(payrollRecords[month]?.[empId]){
-    payrollRecords[month][empId].incentiveStatus='paid';
-    payrollRecords[month][empId].incentivePaidAt=new Date().toISOString();
-    saveData(); renderPayroll(); renderIncentives();
-  }
+  const e=employees.find(x=>x.id===empId);
+  const r=payrollRecords[month]?.[empId];
+  if(!r) return;
+  const name=e?.name||empId;
+  if(!confirm(`${t('msg_confirm_inc_paid')}\n\n${name} — OT: ${fmtD(r.otPay||0)} SAR | Commission: ${fmtD(r.commPay||0)} SAR\n\n${t('msg_confirm_irreversible')}`)) return;
+  payrollRecords[month][empId].incentiveStatus='paid';
+  payrollRecords[month][empId].incentivePaidAt=new Date().toISOString();
+  saveData(); renderPayroll(); renderIncentives();
 }
 
 // ── Attendance ─────────────────────────────────────────
