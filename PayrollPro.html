@@ -904,14 +904,15 @@ function showTip(el,html){
 function hideTip(){ const tip=_tip(); if(tip) tip.classList.remove('show'); }
 function tipRow(label,val,cls=''){return`<div class="pay-tip-row${cls?' '+cls:''}"><span>${label}</span><span class="tip-val${cls?' '+cls:''}">${val}</span></div>`;}
 function buildBaseTip(e,r,dd){
-  const rows=[tipRow(t('col_base')+' ('+t('lbl_monthly')+')',fmt(e.salary)+' SAR'),tipRow(t('lbl_work_days'),r.workDays+' / '+dd+' d'),tipRow(t('lbl_daily_rate'),fmtD(r.dailyRate)+' SAR/d'),tipRow(t('lbl_prorated'),fmtD(r.proratedBase)+' SAR','total')];
+  const rows=[tipRow(t('col_base')+' ('+t('lbl_monthly')+')',fmt(r.salary??e.salary)+' SAR'),tipRow(t('lbl_work_days'),r.workDays+' / '+dd+' d'),tipRow(t('lbl_daily_rate'),fmtD(r.dailyRate)+' SAR/d'),tipRow(t('lbl_prorated'),fmtD(r.proratedBase)+' SAR','total')];
   return`<div class="pay-tip-title">${t('col_base')}</div>`+rows.join('');
 }
 function buildAllowTip(e,r){
   const rows=[];
-  if(Number(e.housing||0)) rows.push(tipRow(t('lbl_housing'),'+'+fmtD(e.housing)+' SAR','green'));
-  if(Number(e.transport||0)) rows.push(tipRow(t('lbl_transport'),'+'+fmtD(e.transport)+' SAR','green'));
-  if(Number(e.other||0)) rows.push(tipRow(t('lbl_other_allow'),'+'+fmtD(e.other)+' SAR','green'));
+  const _housing=r.housing??e.housing; const _transport=r.transport??e.transport; const _other=r.other??e.other;
+  if(Number(_housing||0)) rows.push(tipRow(t('lbl_housing'),'+'+fmtD(_housing)+' SAR','green'));
+  if(Number(_transport||0)) rows.push(tipRow(t('lbl_transport'),'+'+fmtD(_transport)+' SAR','green'));
+  if(Number(_other||0)) rows.push(tipRow(t('lbl_other_allow'),'+'+fmtD(_other)+' SAR','green'));
   if(Number(r.additions||0)) rows.push(tipRow(t('lbl_additions'),'+'+fmtD(r.additions)+' SAR','green'));
   if(!rows.length) rows.push(tipRow('—',''));
   rows.push(tipRow(t('lbl_total'),'+'+fmtD(r.allowances)+' SAR','green total'));
@@ -919,7 +920,7 @@ function buildAllowTip(e,r){
 }
 function buildDedTip(e,r){
   const rows=[];
-  if(Number(r.gosiDed||0)) rows.push(tipRow('GOSI ('+fmtD(e.gosiEmp??9.75)+'%)','−'+fmtD(r.gosiDed)+' SAR','red'));
+  if(Number(r.gosiDed||0)) rows.push(tipRow('GOSI ('+fmtD(r.gosiEmp??e.gosiEmp??9.75)+'%)','−'+fmtD(r.gosiDed)+' SAR','red'));
   if(Number(r.absentDed||0)) rows.push(tipRow(t('lbl_absent')+' ('+r.absentDays+'d)','−'+fmtD(r.absentDed)+' SAR','red'));
   if(Number(r.lateDed||0)) rows.push(tipRow(t('lbl_late_minutes')+' ('+r.lateMinutes+' min)','−'+fmtD(r.lateDed)+' SAR','red'));
   if(Number(r.extraDed||0)) rows.push(tipRow(t('lbl_deductions'),'-'+fmtD(r.extraDed)+' SAR','red'));
@@ -1163,7 +1164,9 @@ function syncEmployeeToPayroll(emp){
       const totalDed=absentDed+lateDed+gosiDed+extraDed;
       const gross=proratedBase+allowances+otPay+commPay;
       const net=gross-totalDed;
-      payrollRecords[month][emp.id]={...rec,workDays,absentDays,lateMinutes,additions,extraDed,
+      payrollRecords[month][emp.id]={...rec,
+        salary:Number(emp.salary||0),housing:Number(emp.housing||0),transport:Number(emp.transport||0),other:Number(emp.other||0),gosiEmp:emp.gosiEmp??9.75,
+        workDays,absentDays,lateMinutes,additions,extraDed,
         otHours,otPay,commPay,commBreakdown,dailyRate,proratedBase,absentDed,lateDed,
         gosiDed,totalDed,allowances,gross,net};
     } else {
@@ -1278,6 +1281,7 @@ function processPayroll(){
       payrollRecords[month][e.id]={
         status:'pending', paidAt:null,
         incentiveStatus:'pending', incentivePaidAt:null,
+        salary:Number(e.salary||0),housing:Number(e.housing||0),transport:Number(e.transport||0),other:Number(e.other||0),gosiEmp:e.gosiEmp??9.75,
         workDays,absentDays,lateMinutes,additions,extraDed,otHours,otPay,commPay,commBreakdown,
         dailyRate,proratedBase,absentDed,lateDed,gosiDed,totalDed,allowances,gross,net,
         processedAt:new Date().toISOString()
@@ -1319,7 +1323,7 @@ function renderPayroll(){
     return`<tr>
       <td><div style="font-weight:500;">${e.name}</div><div style="font-size:11px;color:var(--text2);">${e.empId||''}</div></td>
       <td style="color:var(--text2);">${e.dept||'—'}</td>
-      <td style="font-family:var(--mono);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildBaseTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}'],${_dd}))" onmouseleave="hideTip()">${fmt(e.salary)}</td>
+      <td style="font-family:var(--mono);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildBaseTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}'],${_dd}))" onmouseleave="hideTip()">${fmt(r.salary??e.salary)}</td>
       <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildAllowTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">+${fmt(r.allowances)}</td>
       <td style="font-family:var(--mono);color:var(--amber);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildOTTip(payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">${r.otHours>0?`+${fmtD(r.otPay)} (${r.otHours}h)`:'—'}</td>
       <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildCommTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">${r.commPay>0?`+${fmtD(r.commPay)}`:'—'}</td>
