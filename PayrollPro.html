@@ -1178,27 +1178,38 @@ function renderAttendance(){
         <h3>${t('nav_attendance')} — ${month}</h3>
         <button class="btn btn-secondary btn-sm" onclick="openOtSettings()">${t('lbl_edit_ot')}</button>
       </div>
-      <div class="card-body">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;">
-          ${active.map(e=>`
-            <div class="att-card">
-              <div style="font-size:13px;font-weight:500;margin-bottom:3px;">${e.name}</div>
-              <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">${e.dept||''}</div>
-              <div style="font-size:11px;color:var(--accent);margin-bottom:8px;">${t('lbl_ot')}: ${(otFormulas.find(f=>f.id===e.otFormulaId)||otFormulas[0]||{name:'—'}).name}</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <div><div class="field-label">${t('lbl_work_days')}</div><input class="inp" type="number" id="att-wd-${e.id}" value="${att[e.id]?.workDays??dd}" min="0" max="31" oninput="updateAttPreview('${e.id}')"></div>
-                <div><div class="field-label">${t('lbl_absent_days')}</div><input class="inp" type="number" id="att-ab-${e.id}" value="${att[e.id]?.absentDays??0}" min="0" max="31" oninput="updateAttPreview('${e.id}')"></div>
-                <div><div class="field-label amber">${t('lbl_ot_hours')}</div><input class="inp inp-amber" type="number" id="att-ot-${e.id}" value="${att[e.id]?.otHours??0}" min="0" step="0.5" oninput="updateAttPreview('${e.id}')"></div>
-                <div><div class="field-label green">${t('lbl_additions')}</div><input class="inp inp-green" type="number" id="att-add-${e.id}" value="${att[e.id]?.additions??0}" min="0" oninput="updateAttPreview('${e.id}')"></div>
-                <div><div class="field-label red">${t('lbl_late_minutes')}</div><input class="inp inp-red" type="number" id="att-late-${e.id}" value="${att[e.id]?.lateMinutes??0}" min="0" oninput="updateAttPreview('${e.id}')"></div>
-                <div><div class="field-label red">${t('lbl_extra_deductions')}</div><input class="inp inp-red" type="number" id="att-ded-${e.id}" value="${att[e.id]?.deductions??0}" min="0" oninput="updateAttPreview('${e.id}')"></div>
-              </div>
-              <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-                <div style="font-size:11px;color:var(--text2);">${t('lbl_net_pay')}</div>
-                <div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--green);" id="att-preview-${e.id}">—</div>
-              </div>
-            </div>`).join('')}
-        </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>${t('col_emp')}</th>
+            <th>${t('col_dept')}</th>
+            <th>${t('lbl_work_days')}</th>
+            <th>${t('lbl_absent_days')}</th>
+            <th style="color:var(--amber);">${t('lbl_ot_hours')}</th>
+            <th style="color:var(--red);">${t('lbl_late_minutes')}</th>
+            <th style="color:var(--green);">${t('lbl_additions')}</th>
+            <th style="color:var(--red);">${t('lbl_extra_deductions')}</th>
+            <th style="color:var(--green);">${t('lbl_net_pay')}</th>
+          </tr></thead>
+          <tbody>
+            ${active.length?active.map(e=>`
+              <tr>
+                <td>
+                  <div style="font-weight:500;">${e.name}</div>
+                  <div style="font-size:11px;color:var(--text2);">${e.empId||''}</div>
+                  <div style="font-size:11px;color:var(--accent);">${(otFormulas.find(f=>f.id===e.otFormulaId)||otFormulas[0]||{name:'—'}).name}</div>
+                </td>
+                <td style="color:var(--text2);">${e.dept||'—'}</td>
+                <td><input class="inp" type="number" id="att-wd-${e.id}" value="${att[e.id]?.workDays??dd}" min="0" max="31" style="width:70px;" oninput="updateAttPreview('${e.id}')"></td>
+                <td><input class="inp" type="number" id="att-ab-${e.id}" value="${att[e.id]?.absentDays??0}" min="0" max="31" style="width:70px;" oninput="updateAttPreview('${e.id}')"></td>
+                <td><input class="inp inp-amber" type="number" id="att-ot-${e.id}" value="${att[e.id]?.otHours??0}" min="0" step="0.5" style="width:70px;" oninput="updateAttPreview('${e.id}')"></td>
+                <td><input class="inp inp-red" type="number" id="att-late-${e.id}" value="${att[e.id]?.lateMinutes??0}" min="0" style="width:70px;" oninput="updateAttPreview('${e.id}')"></td>
+                <td><input class="inp inp-green" type="number" id="att-add-${e.id}" value="${att[e.id]?.additions??0}" min="0" style="width:80px;" oninput="updateAttPreview('${e.id}')"></td>
+                <td><input class="inp inp-red" type="number" id="att-ded-${e.id}" value="${att[e.id]?.deductions??0}" min="0" style="width:80px;" oninput="updateAttPreview('${e.id}')"></td>
+                <td style="font-family:var(--mono);font-weight:600;color:var(--green);white-space:nowrap;" id="att-preview-${e.id}">—</td>
+              </tr>`).join(''):`<tr><td colspan="9"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`}
+          </tbody>
+        </table>
       </div>
     </div>`;
   active.forEach(e=>updateAttPreview(e.id));
