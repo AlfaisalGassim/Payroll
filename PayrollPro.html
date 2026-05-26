@@ -349,6 +349,10 @@
         <div class="month-selector">
           <select class="select-sm" id="payroll-month-m" onchange="syncMonth('payroll-month');renderPayroll()"></select>
           <select class="select-sm" id="payroll-month-y" onchange="syncMonth('payroll-month');renderPayroll()"></select>
+          <button class="btn btn-secondary" onclick="exportPayrollPDF()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span data-i18n="btn_export_pdf">Export PDF</span>
+          </button>
           <button class="btn btn-secondary" onclick="exportPayrollExcel()">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span data-i18n="btn_export_excel">Export Excel</span>
@@ -380,6 +384,10 @@
         <div class="month-selector">
           <select class="select-sm" id="incentives-month-m" onchange="syncMonth('incentives-month');renderIncentives()"></select>
           <select class="select-sm" id="incentives-month-y" onchange="syncMonth('incentives-month');renderIncentives()"></select>
+          <button class="btn btn-secondary" onclick="exportIncentivesPDF()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span data-i18n="btn_export_pdf">Export PDF</span>
+          </button>
         </div>
       </div>
       <div class="card">
@@ -609,7 +617,7 @@ const i18n = {
     btn_view_all:'View all', btn_add_employee:'Add Employee', btn_export:'Export',
     btn_import:'Import', btn_cancel:'Cancel', btn_save:'Save Employee',
     btn_save_settings:'Save', btn_print:'Print', btn_load:'Load',
-    btn_process_payroll:'Process Payroll', btn_regenerate:'Regenerate', btn_export_excel:'Export Excel',
+    btn_process_payroll:'Process Payroll', btn_regenerate:'Regenerate', btn_export_excel:'Export Excel', btn_export_pdf:'Export PDF',
     btn_save_attendance:'Save Attendance', btn_save_commission:'Save Commission',
     btn_add_category:'Add Category',
     label_data:'Data',
@@ -714,7 +722,7 @@ const i18n = {
     btn_view_all:'عرض الكل', btn_add_employee:'إضافة موظف', btn_export:'تصدير',
     btn_import:'استيراد', btn_cancel:'إلغاء', btn_save:'حفظ الموظف',
     btn_save_settings:'حفظ', btn_print:'طباعة', btn_load:'تحميل',
-    btn_process_payroll:'معالجة الرواتب', btn_regenerate:'إعادة الحساب', btn_export_excel:'تصدير Excel',
+    btn_process_payroll:'معالجة الرواتب', btn_regenerate:'إعادة الحساب', btn_export_excel:'تصدير Excel', btn_export_pdf:'تصدير PDF',
     btn_save_attendance:'حفظ الحضور', btn_save_commission:'حفظ العمولة',
     btn_add_category:'إضافة فئة',
     label_data:'البيانات',
@@ -1906,6 +1914,278 @@ function exportEmployees(){
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Employees');
   XLSX.writeFile(wb,`employees_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ── PDF shared styles ───────────────────────────────────
+function _pdfBaseStyles(){
+  return`<style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#111;background:#fff;}
+    .pdf-header{background:#0f172a;color:#fff;padding:24px 32px;display:flex;justify-content:space-between;align-items:flex-start;}
+    .pdf-header h1{font-size:20px;font-weight:700;letter-spacing:-0.4px;}
+    .pdf-header h2{font-size:12px;font-weight:400;opacity:0.65;margin-top:3px;}
+    .pdf-header .period{font-size:15px;font-weight:600;margin-bottom:3px;}
+    .pdf-header .meta{text-align:right;font-size:10px;opacity:0.75;}
+    .content{padding:20px 32px;}
+    .summary{display:flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:18px;}
+    .sum-item{flex:1;padding:10px 14px;border-right:1px solid #e2e8f0;}
+    .sum-item:last-child{border-right:none;}
+    .sum-label{font-size:9px;text-transform:uppercase;letter-spacing:0.4px;color:#64748b;font-weight:600;}
+    .sum-val{font-size:14px;font-weight:700;margin-top:2px;font-family:'Courier New',monospace;}
+    table{width:100%;border-collapse:collapse;font-size:10px;}
+    th{background:#1d4ed8;color:#fff;padding:6px 8px;font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:0.3px;}
+    th.r,td.r{text-align:right;}
+    th.c,td.c{text-align:center;}
+    td{padding:5px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+    tr:nth-child(even) td{background:#f8fafc;}
+    .dept-hdr td{background:#eff6ff;color:#1e40af;font-weight:700;font-size:10px;padding:7px 8px;border-top:2px solid #bfdbfe;border-bottom:1px solid #bfdbfe;}
+    .dept-sub td{background:#fef9c3;color:#854d0e;font-weight:600;border-top:1px solid #fde68a;font-size:10px;}
+    .grand td{background:#0f172a;color:#fff;font-weight:700;font-size:10.5px;}
+    .mono{font-family:'Courier New',monospace;}
+    .bold{font-weight:600;}
+    .green{color:#16a34a;}.red{color:#dc2626;}.amber{color:#d97706;}.blue{color:#1d4ed8;}
+    .sub{font-size:9px;color:#64748b;}
+    .badge{display:inline-block;padding:1px 7px;border-radius:20px;font-size:9px;font-weight:600;}
+    .paid{background:#dcfce7;color:#15803d;}
+    .pending{background:#fef9c3;color:#a16207;}
+    .inc-paid{background:#dbeafe;color:#1e40af;}
+    .approval{margin-top:32px;padding-top:20px;border-top:1px solid #e2e8f0;}
+    .approval h3{font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;margin-bottom:16px;}
+    .sig-row{display:flex;gap:32px;}
+    .sig-box{flex:1;border-top:1.5px solid #94a3b8;padding-top:5px;}
+    .sig-title{font-weight:600;font-size:9.5px;color:#374151;margin-bottom:2px;}
+    .sig-line{font-size:9px;color:#94a3b8;margin-top:10px;}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}@page{margin:12mm;size:A4 landscape;}}
+  </style>`;
+}
+
+function _pdfOpen(title,html){
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title>${_pdfBaseStyles()}</head><body>${html}</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>w.print(),600);
+}
+
+// ── Payroll Approval PDF ────────────────────────────────
+function exportPayrollPDF(){
+  const month=getMonthVal('payroll-month');
+  if(!month){alert(t('msg_select_month'));return;}
+  const records=payrollRecords[month];
+  if(!records||!Object.keys(records).length){alert(t('lbl_no_records'));return;}
+  const dd=daysInMonth(month);
+  const [yr,mo]=month.split('-');
+  const monthLabel=new Date(yr,Number(mo)-1,1).toLocaleString('en',{month:'long',year:'numeric'});
+  const today=new Date().toLocaleDateString('en-SA',{day:'numeric',month:'long',year:'numeric'});
+
+  const deptMap={};
+  employees.filter(e=>e.status==='active'&&records[e.id]).forEach(e=>{
+    const d=e.dept||'(No Department)';
+    (deptMap[d]=deptMap[d]||[]).push(e);
+  });
+
+  let gGross=0,gNet=0,gDed=0,gOT=0,gComm=0,gCount=0;
+  let deptSections='';
+
+  Object.keys(deptMap).sort().forEach(dept=>{
+    const emps=deptMap[dept].sort((a,b)=>a.name.localeCompare(b.name));
+    let dGross=0,dNet=0,dDed=0,dOT=0,dComm=0;
+    const rows=emps.map(e=>{
+      const r=records[e.id];
+      dGross+=r.gross||0;dNet+=r.net||0;dDed+=r.totalDed||0;dOT+=r.otPay||0;dComm+=r.commPay||0;
+      const dedTip=`GOSI: ${fmtD(r.gosiDed||0)}${r.absentDed>0?` | Absent: ${fmtD(r.absentDed)}`:''}${r.lateDed>0?` | Late: ${fmtD(r.lateDed)}`:''}${r.extraDed>0?` | Other: ${fmtD(r.extraDed)}`:''}`;
+      return`<tr>
+        <td><span class="bold">${e.name}</span><br><span class="sub">${e.empId||''}${e.dept?` · ${e.dept}`:''}</span></td>
+        <td class="r mono">${fmt(e.salary)}</td>
+        <td class="r mono">${fmt(r.workDays)} / ${dd}</td>
+        <td class="r mono">${fmtD(r.proratedBase||0)}</td>
+        <td class="r mono green">${r.allowances>0?'+'+fmtD(r.allowances):'—'}</td>
+        <td class="r mono amber">${r.otPay>0?'+'+fmtD(r.otPay)+` (${r.otHours}h)`:'—'}</td>
+        <td class="r mono green">${r.commPay>0?'+'+fmtD(r.commPay):'—'}</td>
+        <td class="r mono red" title="${dedTip}">-${fmtD(r.totalDed||0)}<br><span class="sub">${dedTip}</span></td>
+        <td class="r mono bold">${fmt(r.net)}</td>
+        <td class="c"><span class="badge ${r.status==='paid'?'paid':'pending'}">${r.status==='paid'?'Paid':'Pending'}</span></td>
+      </tr>`;
+    }).join('');
+    gGross+=dGross;gNet+=dNet;gDed+=dDed;gOT+=dOT;gComm+=dComm;gCount+=emps.length;
+    deptSections+=`
+      <tr class="dept-hdr"><td colspan="10">${dept.toUpperCase()} &nbsp;·&nbsp; ${emps.length} employee${emps.length!==1?'s':''}</td></tr>
+      ${rows}
+      <tr class="dept-sub">
+        <td class="bold">Subtotal (${emps.length})</td>
+        <td></td><td></td>
+        <td class="r mono">${fmtD(dGross-dOT-dComm-(emps.reduce((s,e)=>s+(records[e.id]?.allowances||0),0)))}</td>
+        <td class="r mono green">+${fmtD(emps.reduce((s,e)=>s+(records[e.id]?.allowances||0),0))}</td>
+        <td class="r mono amber">${dOT>0?'+'+fmtD(dOT):'—'}</td>
+        <td class="r mono green">${dComm>0?'+'+fmtD(dComm):'—'}</td>
+        <td class="r mono red">-${fmtD(dDed)}</td>
+        <td class="r mono bold">${fmt(dNet)}</td>
+        <td></td>
+      </tr>`;
+  });
+
+  const html=`
+  <div class="pdf-header">
+    <div><h1>PayrollPro</h1><h2>Payroll Approval Report</h2></div>
+    <div class="meta"><div class="period">${monthLabel}</div><div>Generated: ${today}</div><div>${gCount} Active Employees</div></div>
+  </div>
+  <div class="content">
+    <div class="summary">
+      <div class="sum-item"><div class="sum-label">Employees</div><div class="sum-val">${gCount}</div></div>
+      <div class="sum-item"><div class="sum-label">Gross Pay</div><div class="sum-val">${fmt(gGross)} SAR</div></div>
+      <div class="sum-item"><div class="sum-label">OT Pay</div><div class="sum-val amber">${fmtD(gOT)} SAR</div></div>
+      <div class="sum-item"><div class="sum-label">Commission</div><div class="sum-val green">${fmtD(gComm)} SAR</div></div>
+      <div class="sum-item"><div class="sum-label">Deductions</div><div class="sum-val red">-${fmt(gDed)} SAR</div></div>
+      <div class="sum-item"><div class="sum-label">Net Payroll</div><div class="sum-val">${fmt(gNet)} SAR</div></div>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Employee</th><th class="r">Base Salary</th><th class="r">Work Days</th>
+        <th class="r">Prorated</th><th class="r">Allowances</th>
+        <th class="r">OT Pay</th><th class="r">Commission</th>
+        <th class="r">Deductions</th><th class="r">Net Pay</th><th class="c">Status</th>
+      </tr></thead>
+      <tbody>
+        ${deptSections}
+        <tr class="grand">
+          <td>GRAND TOTAL — ${gCount} Employees</td>
+          <td></td><td></td><td></td><td></td><td class="r mono">${gOT>0?'+'+fmtD(gOT):'—'}</td>
+          <td class="r mono">${gComm>0?'+'+fmtD(gComm):'—'}</td>
+          <td class="r mono">-${fmt(gDed)}</td>
+          <td class="r mono">${fmt(gNet)} SAR</td><td></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="approval">
+      <h3>Approval</h3>
+      <div class="sig-row">
+        <div class="sig-box"><div class="sig-title">Prepared by (HR)</div><div class="sig-line">Name: ___________________________</div><div class="sig-line">Date: ___________________________</div></div>
+        <div class="sig-box"><div class="sig-title">Reviewed by (Finance)</div><div class="sig-line">Name: ___________________________</div><div class="sig-line">Date: ___________________________</div></div>
+        <div class="sig-box"><div class="sig-title">Approved by (Manager)</div><div class="sig-line">Name: ___________________________</div><div class="sig-line">Date: ___________________________</div></div>
+      </div>
+    </div>
+  </div>`;
+  _pdfOpen(`Payroll Report — ${monthLabel}`,html);
+}
+
+// ── OT & Commission Approval PDF ────────────────────────
+function exportIncentivesPDF(){
+  const month=getMonthVal('incentives-month');
+  if(!month){alert(t('msg_select_month'));return;}
+  const records=payrollRecords[month];
+  if(!records||!Object.keys(records).length){alert(t('lbl_no_records'));return;}
+  const [yr,mo]=month.split('-');
+  const monthLabel=new Date(yr,Number(mo)-1,1).toLocaleString('en',{month:'long',year:'numeric'});
+  const today=new Date().toLocaleDateString('en-SA',{day:'numeric',month:'long',year:'numeric'});
+
+  const eligible=employees.filter(e=>e.status==='active'&&records[e.id]&&((records[e.id].otPay||0)>0||(records[e.id].commPay||0)>0));
+  if(!eligible.length){alert('No OT or commission records for this month.');return;}
+
+  const cats=commissionCategories;
+  const deptMap={};
+  eligible.forEach(e=>{
+    const d=e.dept||'(No Department)';
+    (deptMap[d]=deptMap[d]||[]).push(e);
+  });
+
+  let gOT=0,gComm=0,gTotal=0,gCount=0;
+  let deptSections='';
+
+  // Dynamic commission category columns
+  const usedCats=cats.filter(cat=>eligible.some(e=>{
+    const bd=(records[e.id]?.commBreakdown||[]);
+    return bd.find(b=>b.name===cat.name)?.amount>0;
+  }));
+
+  const catHeaders=usedCats.map(c=>`<th class="r">${c.name}<br><span style="font-weight:400;opacity:0.8;">${c.rateType==='percent'?c.rate+'%':c.rate+' SAR/unit'}</span></th>`).join('');
+
+  Object.keys(deptMap).sort().forEach(dept=>{
+    const emps=deptMap[dept].sort((a,b)=>a.name.localeCompare(b.name));
+    let dOT=0,dComm=0;
+    const rows=emps.map(e=>{
+      const r=records[e.id];
+      const bd=r.commBreakdown||[];
+      const incPaid=(r.incentiveStatus||'pending')==='paid';
+      dOT+=r.otPay||0;dComm+=r.commPay||0;
+      const catCells=usedCats.map(cat=>{
+        const entry=bd.find(b=>b.name===cat.name);
+        if(!entry||!entry.amount) return`<td class="r" style="color:#94a3b8;">—</td>`;
+        const detail=cat.rateType==='percent'
+          ?`${fmtD(entry.value)} SAR × ${entry.rate}%`
+          :`${entry.value} units × ${entry.rate} SAR`;
+        return`<td class="r"><span class="mono green bold">+${fmtD(entry.amount)}</span><br><span class="sub">${detail}</span></td>`;
+      }).join('');
+      const otCell=r.otHours>0
+        ?`<span class="mono amber bold">+${fmtD(r.otPay)}</span><br><span class="sub">${r.otHours}h</span>`
+        :`<span style="color:#94a3b8;">—</span>`;
+      return`<tr>
+        <td><span class="bold">${e.name}</span><br><span class="sub">${e.empId||''}${e.dept?` · ${e.dept}`:''}</span></td>
+        <td class="r">${otCell}</td>
+        ${catCells}
+        <td class="r mono bold green">${r.commPay>0?'+'+fmtD(r.commPay):'—'}</td>
+        <td class="r mono bold">${fmtD((r.otPay||0)+(r.commPay||0))}</td>
+        <td class="c"><span class="badge ${incPaid?'inc-paid':'pending'}">${incPaid?'Paid':'Pending'}</span></td>
+      </tr>`;
+    }).join('');
+    gOT+=dOT;gComm+=dComm;gCount+=emps.length;
+    const dTotal=dOT+dComm;
+    deptSections+=`
+      <tr class="dept-hdr"><td colspan="${4+usedCats.length}">${dept.toUpperCase()} &nbsp;·&nbsp; ${emps.length} employee${emps.length!==1?'s':''}</td></tr>
+      ${rows}
+      <tr class="dept-sub">
+        <td class="bold">Subtotal (${emps.length})</td>
+        <td class="r mono amber">${dOT>0?'+'+fmtD(dOT):'—'}</td>
+        ${usedCats.map(()=>'<td></td>').join('')}
+        <td class="r mono green">${dComm>0?'+'+fmtD(dComm):'—'}</td>
+        <td class="r mono bold">+${fmtD(dTotal)}</td>
+        <td></td>
+      </tr>`;
+  });
+  gTotal=gOT+gComm;
+
+  const html=`
+  <div class="pdf-header">
+    <div><h1>PayrollPro</h1><h2>OT &amp; Commission Approval Report</h2></div>
+    <div class="meta"><div class="period">${monthLabel}</div><div>Generated: ${today}</div><div>${gCount} Employees with Incentives</div></div>
+  </div>
+  <div class="content">
+    <div class="summary">
+      <div class="sum-item"><div class="sum-label">Employees</div><div class="sum-val">${gCount}</div></div>
+      <div class="sum-item"><div class="sum-label">Total OT Pay</div><div class="sum-val amber">${fmtD(gOT)} SAR</div></div>
+      <div class="sum-item"><div class="sum-label">Total Commission</div><div class="sum-val green">${fmtD(gComm)} SAR</div></div>
+      <div class="sum-item"><div class="sum-label">Total Incentives</div><div class="sum-val">${fmtD(gTotal)} SAR</div></div>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Employee</th>
+        <th class="r">OT Pay</th>
+        ${catHeaders}
+        <th class="r">Total Commission</th>
+        <th class="r">Total Incentive</th>
+        <th class="c">Status</th>
+      </tr></thead>
+      <tbody>
+        ${deptSections}
+        <tr class="grand">
+          <td>GRAND TOTAL — ${gCount} Employees</td>
+          <td class="r mono">${gOT>0?'+'+fmtD(gOT):'—'}</td>
+          ${usedCats.map(()=>'<td></td>').join('')}
+          <td class="r mono">${gComm>0?'+'+fmtD(gComm):'—'}</td>
+          <td class="r mono">${fmtD(gTotal)} SAR</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="approval">
+      <h3>Approval</h3>
+      <div class="sig-row">
+        <div class="sig-box"><div class="sig-title">Prepared by (HR)</div><div class="sig-line">Name: ___________________________</div><div class="sig-line">Date: ___________________________</div></div>
+        <div class="sig-box"><div class="sig-title">Reviewed by (Finance)</div><div class="sig-line">Name: ___________________________</div><div class="sig-line">Date: ___________________________</div></div>
+        <div class="sig-box"><div class="sig-title">Approved by (Manager)</div><div class="sig-line">Name: ___________________________</div><div class="sig-line">Date: ___________________________</div></div>
+      </div>
+    </div>
+  </div>`;
+  _pdfOpen(`OT & Commission Report — ${monthLabel}`,html);
 }
 
 function exportPayrollExcel(){
