@@ -170,6 +170,18 @@
   .ps-val.amber { color:var(--amber); }
   .month-selector { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
 
+  /* ── Payroll cell tooltip ── */
+  .pay-tip { position:fixed;z-index:9999;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);box-shadow:0 8px 24px rgba(0,0,0,0.18);padding:10px 14px;min-width:200px;max-width:280px;pointer-events:none;opacity:0;transition:opacity 0.12s;font-size:12px;line-height:1.6; }
+  .pay-tip.show { opacity:1; }
+  .pay-tip-title { font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:6px; }
+  .pay-tip-row { display:flex;justify-content:space-between;gap:16px;color:var(--text2); }
+  .pay-tip-row.total { border-top:1px solid var(--border);margin-top:4px;padding-top:4px;color:var(--text);font-weight:600; }
+  .pay-tip-row .tip-val { font-family:var(--mono);white-space:nowrap; }
+  .pay-tip-row .tip-val.red { color:var(--red); }
+  .pay-tip-row .tip-val.green { color:var(--green); }
+  .pay-tip-row .tip-val.amber { color:var(--amber); }
+  [data-tip] { cursor:default; }
+
   /* ── OT formula ── */
   .ot-formula-box { background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px; }
   .formula-input { width:100%;background:var(--bg2);border:1.5px solid var(--accent);color:var(--accent);border-radius:var(--radius);padding:10px 14px;font-size:14px;font-family:var(--mono);outline:none;direction:ltr;transition:box-shadow 0.12s; }
@@ -212,6 +224,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+<div id="pay-tip" class="pay-tip"></div>
 <div class="app">
   <div class="sidebar">
     <div class="logo"><h1>PayrollPro</h1><span id="logo-sub">HR Management</span></div>
@@ -664,6 +677,8 @@ const i18n = {
     msg_ot_formula_name_required:'All formulas must have a name',
     btn_mark_inc_paid:'Mark OT/Comm Paid',
     lbl_inc_paid:'OT/Comm Paid', lbl_inc_pending:'OT/Comm Pending',
+    lbl_monthly:'Monthly', lbl_daily_rate:'Daily Rate', lbl_prorated:'Prorated Base',
+    lbl_other_allow:'Other Allowance', lbl_total:'Total',
     msg_att_synced:'Attendance saved and payroll updated.',
     btn_import_employees:'Import Employees',
     btn_download_template:'Download Template',
@@ -766,6 +781,8 @@ const i18n = {
     msg_ot_formula_name_required:'يجب إدخال اسم لكل معادلة',
     btn_mark_inc_paid:'تأكيد دفع الإضافي/العمولة',
     lbl_inc_paid:'الإضافي/العمولة مدفوع', lbl_inc_pending:'الإضافي/العمولة معلق',
+    lbl_monthly:'شهري', lbl_daily_rate:'المعدل اليومي', lbl_prorated:'الراتب المحتسب',
+    lbl_other_allow:'بدلات أخرى', lbl_total:'الإجمالي',
     msg_att_synced:'تم حفظ الحضور وتحديث الرواتب.',
     btn_import_employees:'استيراد موظفين',
     btn_download_template:'تنزيل النموذج',
@@ -842,6 +859,61 @@ let editingEmpId = null;
 // ── Helpers ────────────────────────────────────────────
 const fmt  = n => Number(n||0).toLocaleString(lang==='ar'?'ar-SA-u-nu-latn':'en-SA-u-nu-latn',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtD = n => Number(n||0).toLocaleString(lang==='ar'?'ar-SA-u-nu-latn':'en-SA-u-nu-latn',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+// ── Payroll tooltip ─────────────────────────────────────
+const _tip=()=>document.getElementById('pay-tip');
+function showTip(el,html){
+  const tip=_tip(); if(!tip) return;
+  tip.innerHTML=html; tip.classList.add('show');
+  const r=el.getBoundingClientRect();
+  let left=r.left+window.scrollX;
+  let top=r.bottom+window.scrollY+6;
+  const tw=tip.offsetWidth||240;
+  if(left+tw>window.innerWidth-12) left=window.innerWidth-tw-12;
+  if(top+tip.offsetHeight>window.innerHeight+window.scrollY-12) top=r.top+window.scrollY-tip.offsetHeight-6;
+  tip.style.left=left+'px'; tip.style.top=top+'px';
+}
+function hideTip(){ const tip=_tip(); if(tip) tip.classList.remove('show'); }
+function tipRow(label,val,cls=''){return`<div class="pay-tip-row${cls?' '+cls:''}"><span>${label}</span><span class="tip-val${cls?' '+cls:''}">${val}</span></div>`;}
+function buildBaseTip(e,r,dd){
+  const rows=[tipRow(t('col_base')+' ('+t('lbl_monthly')+')',fmt(e.salary)+' SAR'),tipRow(t('lbl_work_days'),r.workDays+' / '+dd+' d'),tipRow(t('lbl_daily_rate'),fmtD(r.dailyRate)+' SAR/d'),tipRow(t('lbl_prorated'),fmtD(r.proratedBase)+' SAR','total')];
+  return`<div class="pay-tip-title">${t('col_base')}</div>`+rows.join('');
+}
+function buildAllowTip(e,r){
+  const rows=[];
+  if(Number(e.housing||0)) rows.push(tipRow(t('lbl_housing'),'+'+fmtD(e.housing)+' SAR','green'));
+  if(Number(e.transport||0)) rows.push(tipRow(t('lbl_transport'),'+'+fmtD(e.transport)+' SAR','green'));
+  if(Number(e.other||0)) rows.push(tipRow(t('lbl_other_allow'),'+'+fmtD(e.other)+' SAR','green'));
+  if(Number(r.additions||0)) rows.push(tipRow(t('lbl_additions'),'+'+fmtD(r.additions)+' SAR','green'));
+  if(!rows.length) rows.push(tipRow('—',''));
+  rows.push(tipRow(t('lbl_total'),'+'+fmtD(r.allowances)+' SAR','green total'));
+  return`<div class="pay-tip-title">${t('col_allowances')}</div>`+rows.join('');
+}
+function buildDedTip(e,r){
+  const rows=[];
+  if(Number(r.gosiDed||0)) rows.push(tipRow('GOSI ('+fmtD(e.gosiEmp??9.75)+'%)','−'+fmtD(r.gosiDed)+' SAR','red'));
+  if(Number(r.absentDed||0)) rows.push(tipRow(t('lbl_absent')+' ('+r.absentDays+'d)','−'+fmtD(r.absentDed)+' SAR','red'));
+  if(Number(r.lateDed||0)) rows.push(tipRow(t('lbl_late_minutes')+' ('+r.lateMinutes+' min)','−'+fmtD(r.lateDed)+' SAR','red'));
+  if(Number(r.extraDed||0)) rows.push(tipRow(t('lbl_deductions'),'-'+fmtD(r.extraDed)+' SAR','red'));
+  if(!rows.length) rows.push(tipRow('—',''));
+  rows.push(tipRow(t('lbl_total'),'−'+fmtD(r.totalDed)+' SAR','red total'));
+  return`<div class="pay-tip-title">${t('lbl_deductions')}</div>`+rows.join('');
+}
+function buildCommTip(e,r){
+  const rows=[];
+  const bd=r.commBreakdown||{};
+  Object.keys(bd).forEach(catId=>{
+    const cat=commissionCategories.find(c=>c.id===catId);
+    if(cat) rows.push(tipRow(cat.name,'+'+fmtD(bd[catId])+' SAR','green'));
+  });
+  if(!rows.length) rows.push(tipRow('—',''));
+  if(rows.length>1) rows.push(tipRow(t('lbl_total'),'+'+fmtD(r.commPay)+' SAR','green total'));
+  return`<div class="pay-tip-title">${t('col_commission')}</div>`+rows.join('');
+}
+function buildNetTip(r){
+  const rows=[tipRow(t('lbl_prorated'),fmtD(r.proratedBase)+' SAR'),tipRow(t('col_allowances'),'+'+fmtD(r.allowances)+' SAR','green'),tipRow(t('col_ot'),r.otPay>0?'+'+fmtD(r.otPay)+' SAR':'—','amber'),tipRow(t('col_commission'),r.commPay>0?'+'+fmtD(r.commPay)+' SAR':'—','green'),tipRow(t('col_deductions'),'−'+fmtD(r.totalDed)+' SAR','red'),tipRow(t('col_net'),fmtD(r.net)+' SAR','total')];
+  return`<div class="pay-tip-title">${t('col_net')}</div>`+rows.join('');
+}
 const daysInMonth = ym => { if(!ym) return 30; const [y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); };
 
 function getMonthVal(prefix) {
@@ -1158,15 +1230,16 @@ function renderPayroll(){
   tbody.innerHTML=rows.map(e=>{
     const r=records[e.id];
     tGross+=r.gross;tNet+=r.net;tDed+=r.totalDed;tOT+=r.otPay||0;tComm+=r.commPay||0;count++;
+    const _dd=daysInMonth(month);
     return`<tr>
       <td><div style="font-weight:500;">${e.name}</div><div style="font-size:11px;color:var(--text2);">${e.empId||''}</div></td>
       <td style="color:var(--text2);">${e.dept||'—'}</td>
-      <td style="font-family:var(--mono);direction:ltr;text-align:start;">${fmt(e.salary)}</td>
-      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">+${fmt(r.allowances)}</td>
+      <td style="font-family:var(--mono);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildBaseTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}'],${_dd}))" onmouseleave="hideTip()">${fmt(e.salary)}</td>
+      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildAllowTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">+${fmt(r.allowances)}</td>
       <td style="font-family:var(--mono);color:var(--amber);direction:ltr;text-align:start;">${r.otHours>0?`+${fmtD(r.otPay)} (${r.otHours}h)`:'—'}</td>
-      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">${r.commPay>0?`+${fmtD(r.commPay)}`:'—'}</td>
-      <td style="font-family:var(--mono);color:var(--red);direction:ltr;text-align:start;">-${fmt(r.totalDed)}</td>
-      <td style="font-family:var(--mono);font-weight:500;direction:ltr;text-align:start;">${fmt(r.net)}</td>
+      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;${r.commPay>0?'cursor:default;':''}" ${r.commPay>0?`data-tip onmouseenter="showTip(this,buildCommTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()"` : ''}>${r.commPay>0?`+${fmtD(r.commPay)}`:'—'}</td>
+      <td style="font-family:var(--mono);color:var(--red);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildDedTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">-${fmt(r.totalDed)}</td>
+      <td style="font-family:var(--mono);font-weight:500;direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildNetTip(payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">${fmt(r.net)}</td>
       <td>
         <span class="badge ${r.status==='paid'?'badge-paid':'badge-pending'}">${t('lbl_'+r.status)}</span><br>
         <span class="badge ${(r.incentiveStatus||'pending')==='paid'?'badge-inc-paid':'badge-pending'}" style="margin-top:3px;">${(r.incentiveStatus||'pending')==='paid'?t('lbl_inc_paid'):t('lbl_inc_pending')}</span>
