@@ -664,6 +664,7 @@ const i18n = {
     lbl_pct_of_value:'% of value', lbl_sar_unit:'SAR / unit',
     lbl_no_payroll_year:'No payroll records for this year',
     msg_delete_emp:'Delete this employee?',
+    msg_cannot_delete_emp:'This employee has at least one paid payroll record and cannot be deleted. Set them to Inactive instead.',
     msg_save_att:'Attendance saved!', msg_save_comm:'Commission saved!',
     msg_imported:'Imported successfully!', msg_invalid_file:'Invalid file',
     msg_select_month:'Select a month', msg_no_employees:'No employees found',
@@ -769,6 +770,7 @@ const i18n = {
     lbl_pct_of_value:'% من القيمة', lbl_sar_unit:'ر.س / وحدة',
     lbl_no_payroll_year:'لا توجد سجلات رواتب لهذا العام',
     msg_delete_emp:'حذف هذا الموظف؟',
+    msg_cannot_delete_emp:'لا يمكن حذف هذا الموظف لوجود راتب مدفوع مسجّل باسمه. يمكنك تعيينه كـ "غير نشط" عوضاً عن ذلك.',
     msg_save_att:'تم حفظ الحضور!', msg_save_comm:'تم حفظ العمولة!',
     msg_imported:'تم الاستيراد بنجاح!', msg_invalid_file:'ملف غير صالح',
     msg_select_month:'اختر الشهر', msg_no_employees:'لا يوجد موظفون',
@@ -1104,6 +1106,8 @@ function saveEmployee(){
 }
 
 function deleteEmployee(id){
+  const hasPaid=Object.values(payrollRecords).some(month=>month[id]?.status==='paid');
+  if(hasPaid){alert(t('msg_cannot_delete_emp'));return;}
   if(!confirm(t('msg_delete_emp'))) return;
   employees=employees.filter(e=>e.id!==id);
   saveData(); renderEmployees();
