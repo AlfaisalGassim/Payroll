@@ -907,11 +907,7 @@ function buildOTTip(r){
 }
 function buildCommTip(e,r){
   const rows=[];
-  const bd=r.commBreakdown||{};
-  Object.keys(bd).forEach(catId=>{
-    const cat=commissionCategories.find(c=>c.id===catId);
-    if(cat) rows.push(tipRow(cat.name,'+'+fmtD(bd[catId])+' SAR','green'));
-  });
+  (r.commBreakdown||[]).forEach(b=>rows.push(tipRow(b.name,'+'+fmtD(b.amount)+' SAR','green')));
   if(!rows.length) rows.push(tipRow('—',''));
   if(rows.length>1) rows.push(tipRow(t('lbl_total'),'+'+fmtD(r.commPay)+' SAR','green total'));
   return`<div class="pay-tip-title">${t('col_commission')}</div>`+rows.join('');
