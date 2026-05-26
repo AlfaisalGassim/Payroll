@@ -306,6 +306,10 @@
       <div class="page-header">
         <div><h2 data-i18n="nav_employees">Employees</h2><p id="emp-count-label"></p></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-secondary" onclick="exportEmployees()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span data-i18n="btn_export_employees">Export Employees</span>
+          </button>
           <button class="btn btn-secondary" onclick="downloadEmployeeTemplate()">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span data-i18n="btn_download_template">Download Template</span>
@@ -680,6 +684,7 @@ const i18n = {
     lbl_monthly:'Monthly', lbl_daily_rate:'Daily Rate', lbl_prorated:'Prorated Base',
     lbl_other_allow:'Other Allowance', lbl_total:'Total',
     msg_att_synced:'Attendance saved and payroll updated.',
+    btn_export_employees:'Export Employees',
     btn_import_employees:'Import Employees',
     btn_download_template:'Download Template',
     msg_import_confirm:'Import {n} employee(s)? Existing employees with the same ID will be updated.',
@@ -784,6 +789,7 @@ const i18n = {
     lbl_monthly:'شهري', lbl_daily_rate:'المعدل اليومي', lbl_prorated:'الراتب المحتسب',
     lbl_other_allow:'بدلات أخرى', lbl_total:'الإجمالي',
     msg_att_synced:'تم حفظ الحضور وتحديث الرواتب.',
+    btn_export_employees:'تصدير الموظفين',
     btn_import_employees:'استيراد موظفين',
     btn_download_template:'تنزيل النموذج',
     msg_import_confirm:'استيراد {n} موظف(ين)؟ سيتم تحديث الموظفين الموجودين بنفس الرقم.',
@@ -1866,6 +1872,32 @@ function downloadEmployeeTemplate(){
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Employees');
   XLSX.writeFile(wb,'employee_import_template.xlsx');
+}
+
+function exportEmployees(){
+  if(!employees.length){alert(t('msg_no_employees'));return;}
+  const headers=[
+    'Full Name','Employee ID','Department','Position',
+    'Base Salary (SAR)','Housing Allowance (SAR)','Transport Allowance (SAR)','Other Allowance (SAR)',
+    'GOSI Employee %','GOSI Employer %','Join Date (YYYY-MM-DD)','Status (active/inactive)',
+    'OT Formula Name','Commission Categories (comma-separated)','Notes'
+  ];
+  const rows=employees.map(e=>{
+    const otName=otFormulas.find(f=>f.id===e.otFormula)?.name||'';
+    const commNames=(e.commissionCats||[]).map(id=>commissionCategories.find(c=>c.id===id)?.name||'').filter(Boolean).join(', ');
+    return[
+      e.name||'', e.empId||'', e.dept||'', e.position||'',
+      Number(e.salary||0), Number(e.housing||0), Number(e.transport||0), Number(e.other||0),
+      Number(e.gosiEmp??9.75), Number(e.gosiEr??11.75),
+      e.joinDate||'', e.status||'active',
+      otName, commNames, e.notes||''
+    ];
+  });
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  ws['!cols']=headers.map((_,i)=>({wch:i<4?22:i===13?30:18}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Employees');
+  XLSX.writeFile(wb,`employees_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
 function importEmployees(event){
