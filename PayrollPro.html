@@ -349,6 +349,10 @@
         <div class="month-selector">
           <select class="select-sm" id="payroll-month-m" onchange="syncMonth('payroll-month');renderPayroll()"></select>
           <select class="select-sm" id="payroll-month-y" onchange="syncMonth('payroll-month');renderPayroll()"></select>
+          <button class="btn btn-secondary" onclick="exportPayrollExcel()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span data-i18n="btn_export_excel">Export Excel</span>
+          </button>
           <button class="btn btn-primary" id="btn-process" onclick="processPayroll()"><span data-i18n="btn_process_payroll">Process Payroll</span></button>
         </div>
       </div>
@@ -605,7 +609,7 @@ const i18n = {
     btn_view_all:'View all', btn_add_employee:'Add Employee', btn_export:'Export',
     btn_import:'Import', btn_cancel:'Cancel', btn_save:'Save Employee',
     btn_save_settings:'Save', btn_print:'Print', btn_load:'Load',
-    btn_process_payroll:'Process Payroll', btn_regenerate:'Regenerate',
+    btn_process_payroll:'Process Payroll', btn_regenerate:'Regenerate', btn_export_excel:'Export Excel',
     btn_save_attendance:'Save Attendance', btn_save_commission:'Save Commission',
     btn_add_category:'Add Category',
     label_data:'Data',
@@ -710,7 +714,7 @@ const i18n = {
     btn_view_all:'عرض الكل', btn_add_employee:'إضافة موظف', btn_export:'تصدير',
     btn_import:'استيراد', btn_cancel:'إلغاء', btn_save:'حفظ الموظف',
     btn_save_settings:'حفظ', btn_print:'طباعة', btn_load:'تحميل',
-    btn_process_payroll:'معالجة الرواتب', btn_regenerate:'إعادة الحساب',
+    btn_process_payroll:'معالجة الرواتب', btn_regenerate:'إعادة الحساب', btn_export_excel:'تصدير Excel',
     btn_save_attendance:'حفظ الحضور', btn_save_commission:'حفظ العمولة',
     btn_add_category:'إضافة فئة',
     label_data:'البيانات',
@@ -1902,6 +1906,183 @@ function exportEmployees(){
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Employees');
   XLSX.writeFile(wb,`employees_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function exportPayrollExcel(){
+  const month=getMonthVal('payroll-month');
+  if(!month){alert(t('msg_select_month'));return;}
+  const records=payrollRecords[month];
+  if(!records||!Object.keys(records).length){alert(t('lbl_no_records'));return;}
+  const dd=daysInMonth(month);
+  const [yr,mo]=month.split('-');
+  const monthLabel=new Date(yr,Number(mo)-1,1).toLocaleString('en',{month:'long',year:'numeric'});
+
+  // Build dept → employees map (sorted)
+  const deptMap={};
+  employees.filter(e=>e.status==='active'&&records[e.id]).forEach(e=>{
+    const d=e.dept||'(No Department)';
+    (deptMap[d]=deptMap[d]||[]).push(e);
+  });
+
+  // ── Sheet 1: Payroll Register ──────────────────────────
+  const COLS=['Employee','ID','Department',
+    'Base Salary','Work Days','Prorated Base',
+    'Housing','Transport','Other Allow.','Additions','Total Allow.',
+    'OT Hours','OT Pay',
+    'Commission',
+    'GOSI %','GOSI Ded.',
+    'Absent Days','Absent Ded.',
+    'Late (min)','Late Ded.',
+    'Extra Ded.','Total Ded.',
+    'Gross Pay','Net Pay',
+    'Pay Status','OT/Comm Status'];
+  const NC=COLS.length;
+  const data=[];
+  const merges=[];
+  const numFmt=(ws,ri,cols)=>cols.forEach(ci=>{const ref=XLSX.utils.encode_cell({r:ri,c:ci});if(ws[ref]&&typeof ws[ref].v==='number')ws[ref].z='#,##0.00';});
+
+  // Title
+  const titleRow=new Array(NC).fill('');
+  titleRow[0]=`Payroll Report — ${monthLabel}`;
+  data.push(titleRow);
+  merges.push({s:{r:0,c:0},e:{r:0,c:NC-1}});
+  data.push(new Array(NC).fill(''));
+
+  let gPro=0,gAllow=0,gOT=0,gComm=0,gGosi=0,gAbsDed=0,gLateDed=0,gExtDed=0,gTDed=0,gGross=0,gNet=0,gCount=0;
+
+  Object.keys(deptMap).sort().forEach(dept=>{
+    const emps=deptMap[dept].sort((a,b)=>a.name.localeCompare(b.name));
+    const dRow=data.length;
+    const dh=new Array(NC).fill('');
+    dh[0]=`DEPARTMENT: ${dept.toUpperCase()}  (${emps.length} employee${emps.length!==1?'s':''})`;
+    data.push(dh);
+    merges.push({s:{r:dRow,c:0},e:{r:dRow,c:NC-1}});
+    data.push([...COLS]);
+
+    let dt={pro:0,allow:0,ot:0,comm:0,gosi:0,absDed:0,lateDed:0,extDed:0,tDed:0,gross:0,net:0};
+
+    emps.forEach(e=>{
+      const r=records[e.id];
+      data.push([
+        e.name, e.empId||'', e.dept||'',
+        Number(e.salary||0), `${r.workDays} / ${dd}`, r.proratedBase||0,
+        Number(e.housing||0), Number(e.transport||0), Number(e.other||0), r.additions||0, r.allowances||0,
+        r.otHours||0, r.otPay||0,
+        r.commPay||0,
+        Number(e.gosiEmp??9.75), r.gosiDed||0,
+        r.absentDays||0, r.absentDed||0,
+        r.lateMinutes||0, r.lateDed||0,
+        r.extraDed||0, r.totalDed||0,
+        r.gross||0, r.net||0,
+        r.status==='paid'?'Paid':'Pending',
+        (r.incentiveStatus||'pending')==='paid'?'Paid':'Pending'
+      ]);
+      dt.pro+=r.proratedBase||0; dt.allow+=r.allowances||0;
+      dt.ot+=r.otPay||0; dt.comm+=r.commPay||0; dt.gosi+=r.gosiDed||0;
+      dt.absDed+=r.absentDed||0; dt.lateDed+=r.lateDed||0; dt.extDed+=r.extraDed||0;
+      dt.tDed+=r.totalDed||0; dt.gross+=r.gross||0; dt.net+=r.net||0;
+    });
+
+    // Dept subtotal
+    const sub=new Array(NC).fill('');
+    sub[0]=`${dept} — Subtotal`;
+    sub[5]=dt.pro; sub[10]=dt.allow; sub[12]=dt.ot; sub[13]=dt.comm;
+    sub[15]=dt.gosi; sub[17]=dt.absDed; sub[19]=dt.lateDed;
+    sub[20]=dt.extDed; sub[21]=dt.tDed; sub[22]=dt.gross; sub[23]=dt.net;
+    data.push(sub);
+    data.push(new Array(NC).fill(''));
+
+    gPro+=dt.pro; gAllow+=dt.allow; gOT+=dt.ot; gComm+=dt.comm; gGosi+=dt.gosi;
+    gAbsDed+=dt.absDed; gLateDed+=dt.lateDed; gExtDed+=dt.extDed;
+    gTDed+=dt.tDed; gGross+=dt.gross; gNet+=dt.net; gCount+=emps.length;
+  });
+
+  // Grand total
+  const gr=new Array(NC).fill('');
+  gr[0]=`GRAND TOTAL — ${gCount} Employees`;
+  gr[5]=gPro; gr[10]=gAllow; gr[12]=gOT; gr[13]=gComm;
+  gr[15]=gGosi; gr[17]=gAbsDed; gr[19]=gLateDed;
+  gr[20]=gExtDed; gr[21]=gTDed; gr[22]=gGross; gr[23]=gNet;
+  data.push(gr);
+  merges.push({s:{r:data.length-1,c:0},e:{r:data.length-1,c:2}});
+
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!merges']=merges;
+  ws['!cols']=[
+    {wch:28},{wch:10},{wch:16},
+    {wch:14},{wch:12},{wch:14},
+    {wch:12},{wch:12},{wch:12},{wch:12},{wch:14},
+    {wch:10},{wch:12},
+    {wch:14},
+    {wch:8},{wch:12},
+    {wch:12},{wch:12},
+    {wch:10},{wch:12},
+    {wch:12},{wch:14},
+    {wch:14},{wch:14},
+    {wch:12},{wch:14}
+  ];
+  const SAR_COLS=[3,5,6,7,8,9,10,12,13,15,17,19,20,21,22,23];
+  data.forEach((_,ri)=>numFmt(ws,ri,SAR_COLS));
+
+  // ── Sheet 2: Commission Breakdown ─────────────────────
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Payroll Register');
+
+  const hasComm=Object.values(records).some(r=>r.commPay>0);
+  if(hasComm&&commissionCategories.length){
+    const cats=commissionCategories;
+    const cHeaders=['Employee','ID','Department',...cats.map(c=>`${c.name} (${c.rateType==='percent'?c.rate+'%':c.rate+' /unit'})`),'Total Commission'];
+    const cNC=cHeaders.length;
+    const cData=[];
+    const cMerges=[];
+
+    const cTitle=new Array(cNC).fill('');
+    cTitle[0]=`Commission Breakdown — ${monthLabel}`;
+    cData.push(cTitle);
+    cMerges.push({s:{r:0,c:0},e:{r:0,c:cNC-1}});
+    cData.push(new Array(cNC).fill(''));
+    cData.push([...cHeaders]);
+
+    Object.keys(deptMap).sort().forEach(dept=>{
+      const emps=deptMap[dept].sort((a,b)=>a.name.localeCompare(b.name));
+      const dRow=cData.length;
+      const dh=new Array(cNC).fill('');
+      dh[0]=`DEPARTMENT: ${dept.toUpperCase()}`;
+      cData.push(dh);
+      cMerges.push({s:{r:dRow,c:0},e:{r:dRow,c:cNC-1}});
+
+      const catTotals=new Array(cats.length).fill(0);
+      let deptCommTotal=0;
+
+      emps.forEach(e=>{
+        const r=records[e.id];
+        const bd=r.commBreakdown||[];
+        const amounts=cats.map(cat=>{
+          const entry=bd.find(b=>b.name===cat.name);
+          return entry?entry.amount:0;
+        });
+        cData.push([e.name,e.empId||'',e.dept||'',...amounts,r.commPay||0]);
+        amounts.forEach((v,i)=>catTotals[i]+=v);
+        deptCommTotal+=r.commPay||0;
+      });
+
+      const sub=new Array(cNC).fill('');
+      sub[0]=`${dept} — Subtotal`;
+      cats.forEach((_,i)=>sub[3+i]=catTotals[i]);
+      sub[cNC-1]=deptCommTotal;
+      cData.push(sub);
+      cData.push(new Array(cNC).fill(''));
+    });
+
+    const wsC=XLSX.utils.aoa_to_sheet(cData);
+    wsC['!merges']=cMerges;
+    wsC['!cols']=[{wch:28},{wch:10},{wch:16},...cats.map(()=>({wch:22})),{wch:16}];
+    const cAmtCols=cats.map((_,i)=>3+i).concat([cNC-1]);
+    cData.forEach((_,ri)=>numFmt(wsC,ri,cAmtCols));
+    XLSX.utils.book_append_sheet(wb,wsC,'Commission Breakdown');
+  }
+
+  XLSX.writeFile(wb,`payroll_${month}.xlsx`);
 }
 
 function importEmployees(event){
