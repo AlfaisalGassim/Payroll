@@ -899,6 +899,12 @@ function buildDedTip(e,r){
   rows.push(tipRow(t('lbl_total'),'−'+fmtD(r.totalDed)+' SAR','red total'));
   return`<div class="pay-tip-title">${t('lbl_deductions')}</div>`+rows.join('');
 }
+function buildOTTip(r){
+  const rows=Number(r.otHours||0)>0
+    ?[tipRow(t('lbl_ot_hours'),r.otHours+'h'),tipRow(t('col_ot'),'+'+fmtD(r.otPay)+' SAR','amber total')]
+    :[tipRow('—','')];
+  return`<div class="pay-tip-title">${t('col_ot')}</div>`+rows.join('');
+}
 function buildCommTip(e,r){
   const rows=[];
   const bd=r.commBreakdown||{};
@@ -1236,8 +1242,8 @@ function renderPayroll(){
       <td style="color:var(--text2);">${e.dept||'—'}</td>
       <td style="font-family:var(--mono);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildBaseTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}'],${_dd}))" onmouseleave="hideTip()">${fmt(e.salary)}</td>
       <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildAllowTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">+${fmt(r.allowances)}</td>
-      <td style="font-family:var(--mono);color:var(--amber);direction:ltr;text-align:start;">${r.otHours>0?`+${fmtD(r.otPay)} (${r.otHours}h)`:'—'}</td>
-      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;${r.commPay>0?'cursor:default;':''}" ${r.commPay>0?`data-tip onmouseenter="showTip(this,buildCommTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()"` : ''}>${r.commPay>0?`+${fmtD(r.commPay)}`:'—'}</td>
+      <td style="font-family:var(--mono);color:var(--amber);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildOTTip(payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">${r.otHours>0?`+${fmtD(r.otPay)} (${r.otHours}h)`:'—'}</td>
+      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildCommTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">${r.commPay>0?`+${fmtD(r.commPay)}`:'—'}</td>
       <td style="font-family:var(--mono);color:var(--red);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildDedTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">-${fmt(r.totalDed)}</td>
       <td style="font-family:var(--mono);font-weight:500;direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildNetTip(payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">${fmt(r.net)}</td>
       <td>
