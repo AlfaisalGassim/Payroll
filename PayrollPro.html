@@ -678,6 +678,7 @@ const i18n = {
     msg_confirm_paid:'Mark this salary as paid? This cannot be undone.',
     msg_confirm_inc_paid:'Mark OT & Commission as paid? This cannot be undone.',
     msg_confirm_irreversible:'Once marked paid, base salary fields will be locked.',
+    msg_base_must_be_paid_first:'Base salary must be marked paid before OT & Commission can be paid.',
     msg_delete_emp:'Delete this employee?',
     msg_cannot_delete_emp:'This employee has at least one paid payroll record and cannot be deleted. Set them to Inactive instead.',
     msg_save_att:'Attendance saved!', msg_save_comm:'Commission saved!',
@@ -787,6 +788,7 @@ const i18n = {
     msg_confirm_paid:'تأكيد تسجيل الراتب كمدفوع؟ لا يمكن التراجع عن هذا الإجراء.',
     msg_confirm_inc_paid:'تأكيد دفع الإضافي والعمولة؟ لا يمكن التراجع عن هذا الإجراء.',
     msg_confirm_irreversible:'بعد التأكيد، سيتم قفل حقول الراتب الأساسي.',
+    msg_base_must_be_paid_first:'يجب تسجيل الراتب الأساسي كمدفوع أولاً قبل تأكيد الإضافي والعمولة.',
     msg_delete_emp:'حذف هذا الموظف؟',
     msg_cannot_delete_emp:'لا يمكن حذف هذا الموظف لوجود راتب مدفوع مسجّل باسمه. يمكنك تعيينه كـ "غير نشط" عوضاً عن ذلك.',
     msg_save_att:'تم حفظ الحضور!', msg_save_comm:'تم حفظ العمولة!',
@@ -1135,31 +1137,44 @@ function saveEmployee(){
 function syncEmployeeToPayroll(emp){
   Object.entries(payrollRecords).forEach(([month,monthRecs])=>{
     const rec=monthRecs[emp.id];
-    if(!rec||rec.status==='paid') return;
+    if(!rec) return;
+    const basePaid=rec.status==='paid';
+    const incPaid=(rec.incentiveStatus||'pending')==='paid';
+    if(basePaid&&incPaid) return;
     const dd=daysInMonth(month);
     const att=attendanceRecords[month]||{};
-    const incPaid=(rec.incentiveStatus||'pending')==='paid';
-    const workDays=att[emp.id]?.workDays??rec.workDays??dd;
-    const absentDays=att[emp.id]?.absentDays??rec.absentDays??0;
-    const lateMinutes=att[emp.id]?.lateMinutes??rec.lateMinutes??0;
-    const additions=att[emp.id]?.additions??rec.additions??0;
-    const extraDed=att[emp.id]?.deductions??rec.extraDed??0;
-    const otHours=incPaid?rec.otHours:(att[emp.id]?.otHours??rec.otHours??0);
-    const otPay=incPaid?rec.otPay:calcOT(emp,otHours,dd);
-    const {total:commPay,breakdown:commBreakdown}=incPaid?{total:rec.commPay,breakdown:rec.commBreakdown}:calcCommission(emp,month);
-    const dailyRate=Number(emp.salary||0)/dd;
-    const minuteRate=dailyRate/(8*60);
-    const proratedBase=dailyRate*workDays;
-    const absentDed=dailyRate*absentDays;
-    const lateDed=minuteRate*lateMinutes;
-    const gosiDed=Number(emp.salary||0)*((emp.gosiEmp??9.75)/100);
-    const allowances=Number(emp.housing||0)+Number(emp.transport||0)+Number(emp.other||0)+Number(additions);
-    const totalDed=absentDed+lateDed+gosiDed+extraDed;
-    const gross=proratedBase+allowances+otPay+commPay;
-    const net=gross-totalDed;
-    payrollRecords[month][emp.id]={...rec,workDays,absentDays,lateMinutes,additions,extraDed,
-      otHours,otPay,commPay,commBreakdown,dailyRate,proratedBase,absentDed,lateDed,
-      gosiDed,totalDed,allowances,gross,net};
+    if(!basePaid){
+      // Base unpaid — recalculate everything from current employee data + attendance
+      const workDays=att[emp.id]?.workDays??rec.workDays??dd;
+      const absentDays=att[emp.id]?.absentDays??rec.absentDays??0;
+      const lateMinutes=att[emp.id]?.lateMinutes??rec.lateMinutes??0;
+      const additions=att[emp.id]?.additions??rec.additions??0;
+      const extraDed=att[emp.id]?.deductions??rec.extraDed??0;
+      const otHours=incPaid?rec.otHours:(att[emp.id]?.otHours??rec.otHours??0);
+      const otPay=incPaid?rec.otPay:calcOT(emp,otHours,dd);
+      const {total:commPay,breakdown:commBreakdown}=incPaid?{total:rec.commPay,breakdown:rec.commBreakdown}:calcCommission(emp,month);
+      const dailyRate=Number(emp.salary||0)/dd;
+      const minuteRate=dailyRate/(8*60);
+      const proratedBase=dailyRate*workDays;
+      const absentDed=dailyRate*absentDays;
+      const lateDed=minuteRate*lateMinutes;
+      const gosiDed=Number(emp.salary||0)*((emp.gosiEmp??9.75)/100);
+      const allowances=Number(emp.housing||0)+Number(emp.transport||0)+Number(emp.other||0)+Number(additions);
+      const totalDed=absentDed+lateDed+gosiDed+extraDed;
+      const gross=proratedBase+allowances+otPay+commPay;
+      const net=gross-totalDed;
+      payrollRecords[month][emp.id]={...rec,workDays,absentDays,lateMinutes,additions,extraDed,
+        otHours,otPay,commPay,commBreakdown,dailyRate,proratedBase,absentDed,lateDed,
+        gosiDed,totalDed,allowances,gross,net};
+    } else {
+      // Base paid — lock base snapshot, only update OT/commission
+      const otHours=att[emp.id]?.otHours??rec.otHours??0;
+      const otPay=calcOT(emp,otHours,dd);
+      const {total:commPay,breakdown:commBreakdown}=calcCommission(emp,month);
+      const gross=(rec.proratedBase||0)+(rec.allowances||0)+otPay+commPay;
+      const net=gross-(rec.totalDed||0);
+      payrollRecords[month][emp.id]={...rec,otHours,otPay,commPay,commBreakdown,gross,net};
+    }
   });
 }
 
@@ -1388,6 +1403,7 @@ function markIncentivePaid(month,empId){
   const e=employees.find(x=>x.id===empId);
   const r=payrollRecords[month]?.[empId];
   if(!r) return;
+  if(r.status!=='paid'){alert(t('msg_base_must_be_paid_first'));return;}
   const name=e?.name||empId;
   if(!confirm(`${t('msg_confirm_inc_paid')}\n\n${name} — OT: ${fmtD(r.otPay||0)} SAR | Commission: ${fmtD(r.commPay||0)} SAR\n\n${t('msg_confirm_irreversible')}`)) return;
   payrollRecords[month][empId].incentiveStatus='paid';
@@ -1498,14 +1514,15 @@ function syncAttToPayroll(month){
     const otHours=incPaid?rec.otHours:(att[e.id]?.otHours??0);
     const otPay=incPaid?rec.otPay:calcOT(e,otHours,dd);
     const {total:commPay,breakdown:commBreakdown}=incPaid?{total:rec.commPay,breakdown:rec.commBreakdown}:calcCommission(e,month);
-    const dailyRate=Number(e.salary||0)/dd;
+    // Base-locked values come from the paid snapshot; live values come from current employee + attendance
+    const dailyRate=basePaid?rec.dailyRate:Number(e.salary||0)/dd;
     const minuteRate=dailyRate/(8*60);
-    const proratedBase=dailyRate*workDays;
-    const absentDed=dailyRate*absentDays;
-    const lateDed=minuteRate*lateMinutes;
-    const gosiDed=Number(e.salary||0)*((e.gosiEmp??9.75)/100);
-    const allowances=Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0)+Number(additions);
-    const totalDed=absentDed+lateDed+gosiDed+extraDed;
+    const proratedBase=basePaid?rec.proratedBase:dailyRate*workDays;
+    const absentDed=basePaid?rec.absentDed:dailyRate*absentDays;
+    const lateDed=basePaid?rec.lateDed:minuteRate*lateMinutes;
+    const gosiDed=basePaid?rec.gosiDed:Number(e.salary||0)*((e.gosiEmp??9.75)/100);
+    const allowances=basePaid?rec.allowances:Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0)+Number(additions);
+    const totalDed=basePaid?rec.totalDed:absentDed+lateDed+gosiDed+extraDed;
     const gross=proratedBase+allowances+otPay+commPay;
     const net=gross-totalDed;
     payrollRecords[month][e.id]={...rec,workDays,absentDays,lateMinutes,additions,extraDed,otHours,
@@ -1629,7 +1646,8 @@ function saveCommission(){
       const rec=payrollRecords[month][e.id];
       if(!rec||(rec.incentiveStatus||'pending')==='paid') return;
       const {total:commPay,breakdown:commBreakdown}=calcCommission(e,month);
-      const gross=(rec.proratedBase??Number(e.salary||0))+(rec.allowances||0)+(rec.otPay||0)+commPay;
+      // Always use locked base snapshot for gross/net — only commission changes
+      const gross=(rec.proratedBase||0)+(rec.allowances||0)+(rec.otPay||0)+commPay;
       const net=gross-(rec.totalDed||0);
       payrollRecords[month][e.id]={...rec,commPay,commBreakdown,gross,net};
     });
