@@ -1376,7 +1376,7 @@ function renderCommission(){
       const isAssigned=assignedCats.includes(cat.id);
       const val=empRec[cat.id]||0;
       return isAssigned
-        ?`<td><input class="inp inp-green" type="number" id="comm-${e.id}-${cat.id}" value="${val}" min="0" step="0.01" oninput="updateCommPreview('${e.id}')" style="width:100px;direction:ltr;"></td>`
+        ?`<td><input class="inp inp-green" type="number" id="comm-${e.id}-${cat.id}" value="${val}" min="0" step="0.01" oninput="updateCommPreview('${e.id}')" style="width:100px;direction:ltr;"><div id="comm-sub-${e.id}-${cat.id}" class="att-sub att-sub-green">${val>0?'+'+fmtD(cat.rateType==='percent'?val*(cat.rate/100):val*cat.rate)+' SAR':'—'}</div></td>`
         :`<td style="color:var(--text2);text-align:center;">—</td>`;
     }).join('');
     return`<tr>
@@ -1394,7 +1394,10 @@ function updateCommPreview(empId){
   cats.forEach(catId=>{
     const cat=commissionCategories.find(c=>c.id===catId); if(!cat) return;
     const value=parseFloat(document.getElementById(`comm-${empId}-${catId}`)?.value)||0;
-    total+=cat.rateType==='percent'?value*(cat.rate/100):value*cat.rate;
+    const amount=cat.rateType==='percent'?value*(cat.rate/100):value*cat.rate;
+    total+=amount;
+    const sub=document.getElementById(`comm-sub-${empId}-${catId}`);
+    if(sub) sub.textContent=amount>0?'+'+fmtD(amount)+' SAR':'—';
   });
   const el=document.getElementById('comm-preview-'+empId);
   if(el) el.textContent=fmtD(total)+' SAR';
