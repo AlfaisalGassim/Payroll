@@ -1128,7 +1128,39 @@ function saveEmployee(){
   };
   if(editingEmpId){const i=employees.findIndex(e=>e.id===editingEmpId);if(i>-1)employees[i]=emp;}
   else employees.push(emp);
+  if(editingEmpId) syncEmployeeToPayroll(emp);
   saveData(); closeEmpModal(); renderEmployees();
+}
+
+function syncEmployeeToPayroll(emp){
+  Object.entries(payrollRecords).forEach(([month,monthRecs])=>{
+    const rec=monthRecs[emp.id];
+    if(!rec||rec.status==='paid') return;
+    const dd=daysInMonth(month);
+    const att=attendanceRecords[month]||{};
+    const incPaid=(rec.incentiveStatus||'pending')==='paid';
+    const workDays=att[emp.id]?.workDays??rec.workDays??dd;
+    const absentDays=att[emp.id]?.absentDays??rec.absentDays??0;
+    const lateMinutes=att[emp.id]?.lateMinutes??rec.lateMinutes??0;
+    const additions=att[emp.id]?.additions??rec.additions??0;
+    const extraDed=att[emp.id]?.deductions??rec.extraDed??0;
+    const otHours=incPaid?rec.otHours:(att[emp.id]?.otHours??rec.otHours??0);
+    const otPay=incPaid?rec.otPay:calcOT(emp,otHours,dd);
+    const {total:commPay,breakdown:commBreakdown}=incPaid?{total:rec.commPay,breakdown:rec.commBreakdown}:calcCommission(emp,month);
+    const dailyRate=Number(emp.salary||0)/dd;
+    const minuteRate=dailyRate/(8*60);
+    const proratedBase=dailyRate*workDays;
+    const absentDed=dailyRate*absentDays;
+    const lateDed=minuteRate*lateMinutes;
+    const gosiDed=Number(emp.salary||0)*((emp.gosiEmp??9.75)/100);
+    const allowances=Number(emp.housing||0)+Number(emp.transport||0)+Number(emp.other||0)+Number(additions);
+    const totalDed=absentDed+lateDed+gosiDed+extraDed;
+    const gross=proratedBase+allowances+otPay+commPay;
+    const net=gross-totalDed;
+    payrollRecords[month][emp.id]={...rec,workDays,absentDays,lateMinutes,additions,extraDed,
+      otHours,otPay,commPay,commBreakdown,dailyRate,proratedBase,absentDed,lateDed,
+      gosiDed,totalDed,allowances,gross,net};
+  });
 }
 
 function deleteEmployee(id){
