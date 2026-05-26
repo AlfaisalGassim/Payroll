@@ -189,6 +189,10 @@
   .inp-red { border-color:#fca5a5;color:var(--red); }
   .inp-red:focus { border-color:var(--red); }
   .att-card { background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow); }
+  .att-sub { font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:3px;white-space:nowrap; }
+  .att-sub-red { color:var(--red); }
+  .att-sub-amber { color:var(--amber); }
+  .att-sub-green { color:var(--green); }
   .field-label { font-size:11px;margin-bottom:4px;color:var(--text2);font-weight:500; }
   .field-label.green { color:var(--green); }
   .field-label.amber { color:var(--amber); }
@@ -1200,12 +1204,12 @@ function renderAttendance(){
                   <div style="font-size:11px;color:var(--accent);">${(otFormulas.find(f=>f.id===e.otFormulaId)||otFormulas[0]||{name:'—'}).name}</div>
                 </td>
                 <td style="color:var(--text2);">${e.dept||'—'}</td>
-                <td><input class="inp" type="number" id="att-wd-${e.id}" value="${att[e.id]?.workDays??dd}" min="0" max="31" style="width:70px;" oninput="updateAttPreview('${e.id}')"></td>
-                <td><input class="inp" type="number" id="att-ab-${e.id}" value="${att[e.id]?.absentDays??0}" min="0" max="31" style="width:70px;" oninput="updateAttPreview('${e.id}')"></td>
-                <td><input class="inp inp-amber" type="number" id="att-ot-${e.id}" value="${att[e.id]?.otHours??0}" min="0" step="0.5" style="width:70px;" oninput="updateAttPreview('${e.id}')"></td>
-                <td><input class="inp inp-red" type="number" id="att-late-${e.id}" value="${att[e.id]?.lateMinutes??0}" min="0" style="width:70px;" oninput="updateAttPreview('${e.id}')"></td>
-                <td><input class="inp inp-green" type="number" id="att-add-${e.id}" value="${att[e.id]?.additions??0}" min="0" style="width:80px;" oninput="updateAttPreview('${e.id}')"></td>
-                <td><input class="inp inp-red" type="number" id="att-ded-${e.id}" value="${att[e.id]?.deductions??0}" min="0" style="width:80px;" oninput="updateAttPreview('${e.id}')"></td>
+                <td><input class="inp" type="number" id="att-wd-${e.id}" value="${att[e.id]?.workDays??dd}" min="0" max="31" style="width:70px;" oninput="updateAttPreview('${e.id}')"><div id="att-wd-sub-${e.id}" class="att-sub">—</div></td>
+                <td><input class="inp" type="number" id="att-ab-${e.id}" value="${att[e.id]?.absentDays??0}" min="0" max="31" style="width:70px;" oninput="updateAttPreview('${e.id}')"><div id="att-ab-sub-${e.id}" class="att-sub att-sub-red">—</div></td>
+                <td><input class="inp inp-amber" type="number" id="att-ot-${e.id}" value="${att[e.id]?.otHours??0}" min="0" step="0.5" style="width:70px;" oninput="updateAttPreview('${e.id}')"><div id="att-ot-sub-${e.id}" class="att-sub att-sub-amber">—</div></td>
+                <td><input class="inp inp-red" type="number" id="att-late-${e.id}" value="${att[e.id]?.lateMinutes??0}" min="0" style="width:70px;" oninput="updateAttPreview('${e.id}')"><div id="att-late-sub-${e.id}" class="att-sub att-sub-red">—</div></td>
+                <td><input class="inp inp-green" type="number" id="att-add-${e.id}" value="${att[e.id]?.additions??0}" min="0" style="width:80px;" oninput="updateAttPreview('${e.id}')"><div id="att-add-sub-${e.id}" class="att-sub att-sub-green">—</div></td>
+                <td><input class="inp inp-red" type="number" id="att-ded-${e.id}" value="${att[e.id]?.deductions??0}" min="0" style="width:80px;" oninput="updateAttPreview('${e.id}')"><div id="att-ded-sub-${e.id}" class="att-sub att-sub-red">—</div></td>
                 <td style="font-family:var(--mono);font-weight:600;color:var(--green);white-space:nowrap;" id="att-preview-${e.id}">—</td>
               </tr>`).join(''):`<tr><td colspan="9"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`}
           </tbody>
@@ -1255,6 +1259,14 @@ function updateAttPreview(empId){
   const net=gross-(absentDed+lateDed+gosiDed+extraDed);
   const el=document.getElementById('att-preview-'+empId);
   if(el) el.textContent=fmt(net)+' SAR';
+  // sub-labels: amount impact of each field
+  const s=(id,txt)=>{const n=document.getElementById(id);if(n)n.textContent=txt;};
+  s('att-wd-sub-'+empId,  proratedBase>0 ? fmtD(proratedBase)+' SAR' : '—');
+  s('att-ab-sub-'+empId,  absentDed>0   ? '−'+fmtD(absentDed)+' SAR'  : '—');
+  s('att-ot-sub-'+empId,  otPay>0       ? '+'+fmtD(otPay)+' SAR'      : '—');
+  s('att-late-sub-'+empId,lateDed>0     ? '−'+fmtD(lateDed)+' SAR'    : '—');
+  s('att-add-sub-'+empId, additions>0   ? '+'+fmtD(additions)+' SAR'  : '—');
+  s('att-ded-sub-'+empId, extraDed>0    ? '−'+fmtD(extraDed)+' SAR'   : '—');
 }
 
 // ── Commission page ────────────────────────────────────
