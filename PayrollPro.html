@@ -942,6 +942,14 @@ function buildNetTip(r){
   const rows=[tipRow(t('lbl_prorated'),fmtD(r.proratedBase)+' SAR'),tipRow(t('col_allowances'),'+'+fmtD(r.allowances)+' SAR','green'),tipRow(t('col_ot'),r.otPay>0?'+'+fmtD(r.otPay)+' SAR':'—','amber'),tipRow(t('col_commission'),r.commPay>0?'+'+fmtD(r.commPay)+' SAR':'—','green'),tipRow(t('col_deductions'),'−'+fmtD(r.totalDed)+' SAR','red'),tipRow(t('col_net'),fmtD(r.net)+' SAR','total')];
   return`<div class="pay-tip-title">${t('col_net')}</div>`+rows.join('');
 }
+function buildIncTotalTip(r){
+  const rows=[
+    tipRow(t('col_ot'),r.otPay>0?'+'+fmtD(r.otPay)+' SAR':'—','amber'),
+    tipRow(t('col_commission'),r.commPay>0?'+'+fmtD(r.commPay)+' SAR':'—','green'),
+    tipRow(t('lbl_total'),'+'+fmtD((r.otPay||0)+(r.commPay||0))+' SAR','total')
+  ];
+  return`<div class="pay-tip-title">${t('nav_incentives')}</div>`+rows.join('');
+}
 const daysInMonth = ym => { if(!ym) return 30; const [y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); };
 
 function getMonthVal(prefix) {
@@ -1319,10 +1327,10 @@ function renderIncentives(){
     return`<tr>
       <td><div style="font-weight:500;">${e.name}</div><div style="font-size:11px;color:var(--text2);">${e.empId||''}</div></td>
       <td style="color:var(--text2);">${e.dept||'—'}</td>
-      <td style="font-family:var(--mono);color:var(--amber);direction:ltr;text-align:start;">${hasOT?'+'+fmtD(r.otPay)+' SAR':'—'}</td>
+      <td style="font-family:var(--mono);color:var(--amber);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildOTTip(payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">${hasOT?'+'+fmtD(r.otPay)+' SAR':'—'}</td>
       <td style="color:var(--text2);">${hasOT?r.otHours+'h':'—'}</td>
-      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">${hasComm?'+'+fmtD(r.commPay)+' SAR':'—'}</td>
-      <td style="font-family:var(--mono);font-weight:500;color:var(--amber);direction:ltr;text-align:start;">+${fmtD((r.otPay||0)+(r.commPay||0))} SAR</td>
+      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildCommTip(employees.find(x=>x.id==='${e.id}'),payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">${hasComm?'+'+fmtD(r.commPay)+' SAR':'—'}</td>
+      <td style="font-family:var(--mono);font-weight:500;color:var(--amber);direction:ltr;text-align:start;cursor:default;" data-tip onmouseenter="showTip(this,buildIncTotalTip(payrollRecords['${month}']['${e.id}']))" onmouseleave="hideTip()">+${fmtD((r.otPay||0)+(r.commPay||0))} SAR</td>
       <td><span class="badge ${(r.incentiveStatus||'pending')==='paid'?'badge-inc-paid':'badge-pending'}">${(r.incentiveStatus||'pending')==='paid'?t('lbl_inc_paid'):t('lbl_inc_pending')}</span></td>
       <td>${(r.incentiveStatus||'pending')==='pending'?`<button class="btn btn-secondary btn-sm" onclick="markIncentivePaid('${month}','${e.id}')">${t('btn_mark_inc_paid')}</button>`:'🔒'}</td>
     </tr>`;
