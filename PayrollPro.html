@@ -1144,14 +1144,14 @@ function renderPayroll(){
   const hasRec=Object.keys(records).length>0;
   document.getElementById('btn-process').style.display=hasRec?'none':'inline-flex';
   document.getElementById('btn-regen').style.display=hasRec?'inline-flex':'none';
-  document.getElementById('payroll-thead').innerHTML=`<th>${t('col_emp')}</th><th>${t('col_dept')}</th><th>${t('col_base')}</th><th>${t('col_allowances')}</th><th>${t('col_deductions')}</th><th>${t('col_net')}</th><th>${t('col_status')}</th><th>${t('col_actions')}</th>`;
+  document.getElementById('payroll-thead').innerHTML=`<th>${t('col_emp')}</th><th>${t('col_dept')}</th><th>${t('col_base')}</th><th>${t('col_allowances')}</th><th>${t('col_ot')}</th><th>${t('col_commission')}</th><th>${t('col_deductions')}</th><th>${t('col_net')}</th><th>${t('col_status')}</th><th>${t('col_actions')}</th>`;
   const tbody=document.getElementById('payroll-tbody');
   const activeEmps=employees.filter(e=>e.status==='active');
   if(!month||!hasRec){
-    tbody.innerHTML=`<tr><td colspan="8"><div class="empty">${t('lbl_no_records')}</div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="10"><div class="empty">${t('lbl_no_records')}</div></td></tr>`;
     document.getElementById('payroll-summary').innerHTML=''; return;
   }
-  let tGross=0,tNet=0,tDed=0,count=0;
+  let tGross=0,tNet=0,tDed=0,tOT=0,tComm=0,count=0;
   const rows=activeEmps.filter(e=>records[e.id]
     &&(!sf||records[e.id].status===sf)
     &&(!df||e.dept===df)
@@ -1159,12 +1159,14 @@ function renderPayroll(){
   );
   tbody.innerHTML=rows.map(e=>{
     const r=records[e.id];
-    tGross+=r.gross;tNet+=r.net;tDed+=r.totalDed;count++;
+    tGross+=r.gross;tNet+=r.net;tDed+=r.totalDed;tOT+=r.otPay||0;tComm+=r.commPay||0;count++;
     return`<tr>
       <td><div style="font-weight:500;">${e.name}</div><div style="font-size:11px;color:var(--text2);">${e.empId||''}</div></td>
       <td style="color:var(--text2);">${e.dept||'—'}</td>
       <td style="font-family:var(--mono);direction:ltr;text-align:start;">${fmt(e.salary)}</td>
       <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">+${fmt(r.allowances)}</td>
+      <td style="font-family:var(--mono);color:var(--amber);direction:ltr;text-align:start;">${r.otHours>0?`+${fmtD(r.otPay)} (${r.otHours}h)`:'—'}</td>
+      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">${r.commPay>0?`+${fmtD(r.commPay)}`:'—'}</td>
       <td style="font-family:var(--mono);color:var(--red);direction:ltr;text-align:start;">-${fmt(r.totalDed)}</td>
       <td style="font-family:var(--mono);font-weight:500;direction:ltr;text-align:start;">${fmt(r.net)}</td>
       <td><span class="badge ${r.status==='paid'?'badge-paid':'badge-pending'}">${t('lbl_'+r.status)}</span></td>
@@ -1173,10 +1175,12 @@ function renderPayroll(){
         <button class="btn btn-secondary btn-sm" onclick="viewSlip('${e.id}','${month}')">📄</button>
       </div></td>
     </tr>`;
-  }).join('')||`<tr><td colspan="8"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`;
+  }).join('')||`<tr><td colspan="10"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`;
   document.getElementById('payroll-summary').innerHTML=`
     <div class="ps-item"><div class="ps-label">${t('lbl_employees')}</div><div class="ps-val">${count}</div></div>
     <div class="ps-item"><div class="ps-label">${t('lbl_total_gross')}</div><div class="ps-val">${fmt(tGross)} SAR</div></div>
+    <div class="ps-item"><div class="ps-label">${t('lbl_ot')}</div><div class="ps-val amber">+${fmtD(tOT)} SAR</div></div>
+    <div class="ps-item"><div class="ps-label">${t('nav_commission')}</div><div class="ps-val green">+${fmtD(tComm)} SAR</div></div>
     <div class="ps-item"><div class="ps-label">${t('lbl_deductions')}</div><div class="ps-val red">-${fmt(tDed)} SAR</div></div>
     <div class="ps-item"><div class="ps-label">${t('lbl_net_pay')}</div><div class="ps-val green">${fmt(tNet)} SAR</div></div>`;
 }
