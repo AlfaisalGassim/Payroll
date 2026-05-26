@@ -585,6 +585,7 @@ const i18n = {
     lbl_employees:'Employees', lbl_base_salary:'Base Salary', lbl_total_gross:'Total Gross',
     lbl_departments:'Departments', lbl_inactive:'inactive', lbl_on_commission:'on commission',
     lbl_work_days:'Work Days', lbl_absent_days:'Absent Days', lbl_ot_hours:'OT Hours',
+    lbl_late_minutes:'Late (min)', lbl_late_ded:'Late Deduction',
     lbl_additions:'Additions (SAR)', lbl_extra_deductions:'Extra Deductions (SAR)',
     lbl_ot:'Overtime', lbl_deductions:'Deductions', lbl_net_pay:'Net Pay',
     lbl_total_deductions:'Total Deductions',
@@ -682,6 +683,7 @@ const i18n = {
     lbl_employees:'الموظفون', lbl_base_salary:'الراتب الأساسي', lbl_total_gross:'الإجمالي',
     lbl_departments:'الأقسام', lbl_inactive:'غير نشط', lbl_on_commission:'بعمولة',
     lbl_work_days:'أيام العمل', lbl_absent_days:'أيام الغياب', lbl_ot_hours:'ساعات الإضافي',
+    lbl_late_minutes:'تأخر (دقيقة)', lbl_late_ded:'خصم التأخر',
     lbl_additions:'إضافات (ر.س)', lbl_extra_deductions:'خصومات إضافية (ر.س)',
     lbl_ot:'إضافي', lbl_deductions:'الخصومات', lbl_net_pay:'صافي الراتب',
     lbl_total_deductions:'إجمالي الخصومات',
@@ -1062,14 +1064,17 @@ function processPayroll(force=false){
   employees.filter(e=>e.status==='active').forEach(e=>{
     const workDays=att[e.id]?.workDays??dd;
     const absentDays=att[e.id]?.absentDays??0;
+    const lateMinutes=att[e.id]?.lateMinutes??0;
     const additions=att[e.id]?.additions??0;
     const extraDed=att[e.id]?.deductions??0;
     const otHours=att[e.id]?.otHours??0;
     const dailyRate=Number(e.salary||0)/dd;
+    const minuteRate=dailyRate/(8*60);
     const proratedBase=dailyRate*workDays;
     const absentDed=dailyRate*absentDays;
+    const lateDed=minuteRate*lateMinutes;
     const gosiDed=Number(e.salary||0)*((e.gosiEmp??9.75)/100);
-    const totalDed=absentDed+gosiDed+extraDed;
+    const totalDed=absentDed+lateDed+gosiDed+extraDed;
     const otPay=calcOT(e,otHours,dd);
     const {total:commPay,breakdown:commBreakdown}=calcCommission(e,month);
     const allowances=Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0)+Number(additions);
@@ -1079,8 +1084,8 @@ function processPayroll(force=false){
       payrollRecords[month][e.id]={
         status:force?(existing[e.id]?.status||'pending'):'pending',
         paidAt:force?(existing[e.id]?.paidAt||null):null,
-        workDays,absentDays,additions,extraDed,otHours,otPay,commPay,commBreakdown,
-        dailyRate,proratedBase,absentDed,gosiDed,totalDed,allowances,gross,net,
+        workDays,absentDays,lateMinutes,additions,extraDed,otHours,otPay,commPay,commBreakdown,
+        dailyRate,proratedBase,absentDed,lateDed,gosiDed,totalDed,allowances,gross,net,
         processedAt:new Date().toISOString()
       };
     }
@@ -1185,7 +1190,8 @@ function renderAttendance(){
                 <div><div class="field-label">${t('lbl_absent_days')}</div><input class="inp" type="number" id="att-ab-${e.id}" value="${att[e.id]?.absentDays??0}" min="0" max="31" oninput="updateAttPreview('${e.id}')"></div>
                 <div><div class="field-label amber">${t('lbl_ot_hours')}</div><input class="inp inp-amber" type="number" id="att-ot-${e.id}" value="${att[e.id]?.otHours??0}" min="0" step="0.5" oninput="updateAttPreview('${e.id}')"></div>
                 <div><div class="field-label green">${t('lbl_additions')}</div><input class="inp inp-green" type="number" id="att-add-${e.id}" value="${att[e.id]?.additions??0}" min="0" oninput="updateAttPreview('${e.id}')"></div>
-                <div style="grid-column:1/-1;"><div class="field-label red">${t('lbl_extra_deductions')}</div><input class="inp inp-red" type="number" id="att-ded-${e.id}" value="${att[e.id]?.deductions??0}" min="0" oninput="updateAttPreview('${e.id}')"></div>
+                <div><div class="field-label red">${t('lbl_late_minutes')}</div><input class="inp inp-red" type="number" id="att-late-${e.id}" value="${att[e.id]?.lateMinutes??0}" min="0" oninput="updateAttPreview('${e.id}')"></div>
+                <div><div class="field-label red">${t('lbl_extra_deductions')}</div><input class="inp inp-red" type="number" id="att-ded-${e.id}" value="${att[e.id]?.deductions??0}" min="0" oninput="updateAttPreview('${e.id}')"></div>
               </div>
               <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
                 <div style="font-size:11px;color:var(--text2);">${t('lbl_net_pay')}</div>
@@ -1207,6 +1213,7 @@ function saveAttendance(){
       workDays:parseInt(document.getElementById('att-wd-'+e.id)?.value)||daysInMonth(month),
       absentDays:parseInt(document.getElementById('att-ab-'+e.id)?.value)||0,
       otHours:parseFloat(document.getElementById('att-ot-'+e.id)?.value)||0,
+      lateMinutes:parseFloat(document.getElementById('att-late-'+e.id)?.value)||0,
       additions:parseFloat(document.getElementById('att-add-'+e.id)?.value)||0,
       deductions:parseFloat(document.getElementById('att-ded-'+e.id)?.value)||0
     };
@@ -1221,17 +1228,20 @@ function updateAttPreview(empId){
   const workDays=parseFloat(document.getElementById('att-wd-'+empId)?.value)??dd;
   const absentDays=parseFloat(document.getElementById('att-ab-'+empId)?.value)||0;
   const otHours=parseFloat(document.getElementById('att-ot-'+empId)?.value)||0;
+  const lateMinutes=parseFloat(document.getElementById('att-late-'+empId)?.value)||0;
   const additions=parseFloat(document.getElementById('att-add-'+empId)?.value)||0;
   const extraDed=parseFloat(document.getElementById('att-ded-'+empId)?.value)||0;
   const dailyRate=Number(e.salary||0)/dd;
+  const minuteRate=dailyRate/(8*60);
   const proratedBase=dailyRate*workDays;
   const absentDed=dailyRate*absentDays;
+  const lateDed=minuteRate*lateMinutes;
   const gosiDed=Number(e.salary||0)*((e.gosiEmp??9.75)/100);
   const otPay=calcOT(e,otHours,dd);
   const {total:commPay}=calcCommission(e,month);
   const allowances=Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0)+additions;
   const gross=proratedBase+allowances+otPay+commPay;
-  const net=gross-(absentDed+gosiDed+extraDed);
+  const net=gross-(absentDed+lateDed+gosiDed+extraDed);
   const el=document.getElementById('att-preview-'+empId);
   if(el) el.textContent=fmt(net)+' SAR';
 }
@@ -1409,7 +1419,8 @@ function viewSlip(empId,month){
         <div class="payslip-section">
           <h4>${t('lbl_deductions')}</h4>
           <div class="payslip-row"><span>GOSI (${e.gosiEmp??9.75}%)</span><span>${fmtD(gosiAmt)} SAR</span></div>
-          ${Number(r.absentDed)>0?`<div class="payslip-row"><span>${t('lbl_absent')} (${r.absentDays})</span><span>${fmtD(r.absentDed)} SAR</span></div>`:''}
+          ${Number(r.absentDed)>0?`<div class="payslip-row"><span>${t('lbl_absent')} (${r.absentDays}d)</span><span>${fmtD(r.absentDed)} SAR</span></div>`:''}
+          ${Number(r.lateDed)>0?`<div class="payslip-row"><span>${t('lbl_late_ded')} (${r.lateMinutes}min)</span><span>${fmtD(r.lateDed)} SAR</span></div>`:''}
           ${Number(r.extraDed)>0?`<div class="payslip-row"><span>${t('lbl_other_ded')}</span><span>${fmtD(r.extraDed)} SAR</span></div>`:''}
           <div class="payslip-total"><span>${t('lbl_total_deductions')}</span><span>${fmtD(r.totalDed)} SAR</span></div>
         </div>
