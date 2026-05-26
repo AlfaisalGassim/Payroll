@@ -95,6 +95,7 @@
   .badge-inactive { background:#fee2e2;color:#b91c1c; }
   .badge-paid { background:#dcfce7;color:#15803d; }
   .badge-pending { background:#fef9c3;color:#a16207; }
+  .badge-inc-paid { background:#dbeafe;color:#1e40af; }
   .badge-comm { background:#dbeafe;color:#1e40af; }
 
   /* ── Search ── */
@@ -331,11 +332,7 @@
         <div class="month-selector">
           <select class="select-sm" id="payroll-month-m" onchange="syncMonth('payroll-month');renderPayroll()"></select>
           <select class="select-sm" id="payroll-month-y" onchange="syncMonth('payroll-month');renderPayroll()"></select>
-          <button class="btn btn-secondary" id="btn-regen" onclick="processPayroll(true)" style="display:none;">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            <span data-i18n="btn_regenerate">Regenerate</span>
-          </button>
-          <button class="btn btn-primary" id="btn-process" onclick="processPayroll(false)"><span data-i18n="btn_process_payroll">Process Payroll</span></button>
+          <button class="btn btn-primary" id="btn-process" onclick="processPayroll()"><span data-i18n="btn_process_payroll">Process Payroll</span></button>
         </div>
       </div>
       <div class="card">
@@ -665,6 +662,9 @@ const i18n = {
     btn_add_ot_formula:'Add Formula',
     lbl_ot_formula_name:'Formula Name',
     msg_ot_formula_name_required:'All formulas must have a name',
+    btn_mark_inc_paid:'Mark OT/Comm Paid',
+    lbl_inc_paid:'OT/Comm Paid', lbl_inc_pending:'OT/Comm Pending',
+    msg_att_synced:'Attendance saved and payroll updated.',
     btn_import_employees:'Import Employees',
     btn_download_template:'Download Template',
     msg_import_confirm:'Import {n} employee(s)? Existing employees with the same ID will be updated.',
@@ -764,6 +764,9 @@ const i18n = {
     btn_add_ot_formula:'إضافة معادلة',
     lbl_ot_formula_name:'اسم المعادلة',
     msg_ot_formula_name_required:'يجب إدخال اسم لكل معادلة',
+    btn_mark_inc_paid:'تأكيد دفع الإضافي/العمولة',
+    lbl_inc_paid:'الإضافي/العمولة مدفوع', lbl_inc_pending:'الإضافي/العمولة معلق',
+    msg_att_synced:'تم حفظ الحضور وتحديث الرواتب.',
     btn_import_employees:'استيراد موظفين',
     btn_download_template:'تنزيل النموذج',
     msg_import_confirm:'استيراد {n} موظف(ين)؟ سيتم تحديث الموظفين الموجودين بنفس الرقم.',
@@ -1087,14 +1090,11 @@ function calcCommission(emp,month){
 }
 
 // ── Payroll ────────────────────────────────────────────
-function processPayroll(force=false){
+function processPayroll(){
   const month=getMonthVal('payroll-month');
   if(!month){alert(t('msg_select_month'));return;}
   if(!employees.length){alert(t('msg_no_employees'));return;}
   const existing=payrollRecords[month]||{};
-  if(force&&Object.values(existing).some(r=>r.status==='paid')){
-    if(!confirm(t('msg_paid_warning'))) return;
-  }
   payrollRecords[month]=payrollRecords[month]||{};
   const att=attendanceRecords[month]||{};
   const dd=daysInMonth(month);
@@ -1117,10 +1117,10 @@ function processPayroll(force=false){
     const allowances=Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0)+Number(additions);
     const gross=proratedBase+allowances+otPay+commPay;
     const net=gross-totalDed;
-    if(!existing[e.id]||force){
+    if(!existing[e.id]){
       payrollRecords[month][e.id]={
-        status:force?(existing[e.id]?.status||'pending'):'pending',
-        paidAt:force?(existing[e.id]?.paidAt||null):null,
+        status:'pending', paidAt:null,
+        incentiveStatus:'pending', incentivePaidAt:null,
         workDays,absentDays,lateMinutes,additions,extraDed,otHours,otPay,commPay,commBreakdown,
         dailyRate,proratedBase,absentDed,lateDed,gosiDed,totalDed,allowances,gross,net,
         processedAt:new Date().toISOString()
@@ -1142,8 +1142,6 @@ function renderPayroll(){
   const search=(document.getElementById('payroll-search')?.value||'').toLowerCase();
   const records=payrollRecords[month]||{};
   const hasRec=Object.keys(records).length>0;
-  document.getElementById('btn-process').style.display=hasRec?'none':'inline-flex';
-  document.getElementById('btn-regen').style.display=hasRec?'inline-flex':'none';
   document.getElementById('payroll-thead').innerHTML=`<th>${t('col_emp')}</th><th>${t('col_dept')}</th><th>${t('col_base')}</th><th>${t('col_allowances')}</th><th>${t('col_ot')}</th><th>${t('col_commission')}</th><th>${t('col_deductions')}</th><th>${t('col_net')}</th><th>${t('col_status')}</th><th>${t('col_actions')}</th>`;
   const tbody=document.getElementById('payroll-tbody');
   const activeEmps=employees.filter(e=>e.status==='active');
@@ -1169,9 +1167,13 @@ function renderPayroll(){
       <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">${r.commPay>0?`+${fmtD(r.commPay)}`:'—'}</td>
       <td style="font-family:var(--mono);color:var(--red);direction:ltr;text-align:start;">-${fmt(r.totalDed)}</td>
       <td style="font-family:var(--mono);font-weight:500;direction:ltr;text-align:start;">${fmt(r.net)}</td>
-      <td><span class="badge ${r.status==='paid'?'badge-paid':'badge-pending'}">${t('lbl_'+r.status)}</span></td>
-      <td><div style="display:flex;gap:5px;">
+      <td>
+        <span class="badge ${r.status==='paid'?'badge-paid':'badge-pending'}">${t('lbl_'+r.status)}</span><br>
+        <span class="badge ${(r.incentiveStatus||'pending')==='paid'?'badge-inc-paid':'badge-pending'}" style="margin-top:3px;">${(r.incentiveStatus||'pending')==='paid'?t('lbl_inc_paid'):t('lbl_inc_pending')}</span>
+      </td>
+      <td><div style="display:flex;gap:5px;flex-wrap:wrap;">
         ${r.status==='pending'?`<button class="btn btn-secondary btn-sm" onclick="markPaid('${month}','${e.id}')">${t('lbl_paid')} ✓</button>`:''}
+        ${(r.incentiveStatus||'pending')==='pending'&&(r.otPay>0||r.commPay>0)?`<button class="btn btn-secondary btn-sm" onclick="markIncentivePaid('${month}','${e.id}')">${t('btn_mark_inc_paid')}</button>`:''}
         <button class="btn btn-secondary btn-sm" onclick="viewSlip('${e.id}','${month}')">📄</button>
       </div></td>
     </tr>`;
@@ -1194,11 +1196,11 @@ function renderIncentives(){
   const search=(document.getElementById('incentives-search')?.value||'').toLowerCase();
   const records=payrollRecords[month]||{};
   const hasRec=Object.keys(records).length>0;
-  document.getElementById('incentives-thead').innerHTML=`<th>${t('col_emp')}</th><th>${t('col_dept')}</th><th>${t('col_ot')}</th><th>${t('lbl_ot_hours')}</th><th>${t('col_commission')}</th><th>${t('col_net')}</th>`;
+  document.getElementById('incentives-thead').innerHTML=`<th>${t('col_emp')}</th><th>${t('col_dept')}</th><th>${t('col_ot')}</th><th>${t('lbl_ot_hours')}</th><th>${t('col_commission')}</th><th>${t('col_net')}</th><th>${t('col_status')}</th><th>${t('col_actions')}</th>`;
   const tbody=document.getElementById('incentives-tbody');
   const activeEmps=employees.filter(e=>e.status==='active');
   if(!month||!hasRec){
-    tbody.innerHTML=`<tr><td colspan="6"><div class="empty">${t('lbl_no_records')}</div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="8"><div class="empty">${t('lbl_no_records')}</div></td></tr>`;
     document.getElementById('incentives-summary').innerHTML=''; return;
   }
   const rows=activeEmps.filter(e=>records[e.id]
@@ -1218,8 +1220,10 @@ function renderIncentives(){
       <td style="color:var(--text2);">${hasOT?r.otHours+'h':'—'}</td>
       <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">${hasComm?'+'+fmtD(r.commPay)+' SAR':'—'}</td>
       <td style="font-family:var(--mono);font-weight:500;color:var(--amber);direction:ltr;text-align:start;">+${fmtD((r.otPay||0)+(r.commPay||0))} SAR</td>
+      <td><span class="badge ${(r.incentiveStatus||'pending')==='paid'?'badge-inc-paid':'badge-pending'}">${(r.incentiveStatus||'pending')==='paid'?t('lbl_inc_paid'):t('lbl_inc_pending')}</span></td>
+      <td>${(r.incentiveStatus||'pending')==='pending'?`<button class="btn btn-secondary btn-sm" onclick="markIncentivePaid('${month}','${e.id}')">${t('btn_mark_inc_paid')}</button>`:'🔒'}</td>
     </tr>`;
-  }).filter(Boolean).join('')||`<tr><td colspan="6"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`;
+  }).filter(Boolean).join('')||`<tr><td colspan="8"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`;
   document.getElementById('incentives-summary').innerHTML=`
     <div class="ps-item"><div class="ps-label">${t('lbl_employees')}</div><div class="ps-val">${count}</div></div>
     <div class="ps-item"><div class="ps-label">${t('lbl_ot')}</div><div class="ps-val amber">+${fmtD(tOT)} SAR</div></div>
@@ -1232,6 +1236,13 @@ function markPaid(month,empId){
     payrollRecords[month][empId].status='paid';
     payrollRecords[month][empId].paidAt=new Date().toISOString();
     saveData(); renderPayroll();
+  }
+}
+function markIncentivePaid(month,empId){
+  if(payrollRecords[month]?.[empId]){
+    payrollRecords[month][empId].incentiveStatus='paid';
+    payrollRecords[month][empId].incentivePaidAt=new Date().toISOString();
+    saveData(); renderPayroll(); renderIncentives();
   }
 }
 
@@ -1271,22 +1282,29 @@ function renderAttendance(){
             <th style="color:var(--green);">${t('lbl_net_pay')}</th>
           </tr></thead>
           <tbody>
-            ${active.length?active.map(e=>`
-              <tr>
+            ${active.length?active.map(e=>{
+              const pr=(payrollRecords[month]||{})[e.id];
+              const basePaid=pr?.status==='paid';
+              const incPaid=(pr?.incentiveStatus||'pending')==='paid';
+              const d1=basePaid?'disabled':'';
+              const d2=incPaid?'disabled':'';
+              return`<tr${basePaid?' style="opacity:0.85;"':''}>
                 <td>
                   <div style="font-weight:500;">${e.name}</div>
                   <div style="font-size:11px;color:var(--text2);">${e.empId||''}</div>
                   <div style="font-size:11px;color:var(--accent);">${(otFormulas.find(f=>f.id===e.otFormulaId)||otFormulas[0]||{name:'—'}).name}</div>
+                  ${basePaid?`<span class="badge badge-paid" style="font-size:9px;margin-top:3px;">${t('lbl_paid')}</span>`:''}
+                  ${incPaid?`<span class="badge badge-inc-paid" style="font-size:9px;margin-top:3px;">${t('lbl_inc_paid')}</span>`:''}
                 </td>
                 <td style="color:var(--text2);">${e.dept||'—'}</td>
-                <td><input class="inp" type="number" id="att-wd-${e.id}" value="${att[e.id]?.workDays??dd}" min="0" max="31" style="width:70px;" oninput="updateAttPreview('${e.id}')"><div id="att-wd-sub-${e.id}" class="att-sub">—</div></td>
-                <td><input class="inp" type="number" id="att-ab-${e.id}" value="${att[e.id]?.absentDays??0}" min="0" max="31" style="width:70px;" oninput="updateAttPreview('${e.id}')"><div id="att-ab-sub-${e.id}" class="att-sub att-sub-red">—</div></td>
-                <td><input class="inp inp-amber" type="number" id="att-ot-${e.id}" value="${att[e.id]?.otHours??0}" min="0" step="0.5" style="width:70px;" oninput="updateAttPreview('${e.id}')"><div id="att-ot-sub-${e.id}" class="att-sub att-sub-amber">—</div></td>
-                <td><input class="inp inp-red" type="number" id="att-late-${e.id}" value="${att[e.id]?.lateMinutes??0}" min="0" style="width:70px;" oninput="updateAttPreview('${e.id}')"><div id="att-late-sub-${e.id}" class="att-sub att-sub-red">—</div></td>
-                <td><input class="inp inp-green" type="number" id="att-add-${e.id}" value="${att[e.id]?.additions??0}" min="0" style="width:80px;" oninput="updateAttPreview('${e.id}')"><div id="att-add-sub-${e.id}" class="att-sub att-sub-green">—</div></td>
-                <td><input class="inp inp-red" type="number" id="att-ded-${e.id}" value="${att[e.id]?.deductions??0}" min="0" style="width:80px;" oninput="updateAttPreview('${e.id}')"><div id="att-ded-sub-${e.id}" class="att-sub att-sub-red">—</div></td>
+                <td><input class="inp" type="number" id="att-wd-${e.id}" value="${att[e.id]?.workDays??dd}" min="0" max="31" style="width:70px;" oninput="updateAttPreview('${e.id}')" ${d1}><div id="att-wd-sub-${e.id}" class="att-sub">—</div></td>
+                <td><input class="inp" type="number" id="att-ab-${e.id}" value="${att[e.id]?.absentDays??0}" min="0" max="31" style="width:70px;" oninput="updateAttPreview('${e.id}')" ${d1}><div id="att-ab-sub-${e.id}" class="att-sub att-sub-red">—</div></td>
+                <td><input class="inp inp-amber" type="number" id="att-ot-${e.id}" value="${att[e.id]?.otHours??0}" min="0" step="0.5" style="width:70px;" oninput="updateAttPreview('${e.id}')" ${d2}><div id="att-ot-sub-${e.id}" class="att-sub att-sub-amber">—</div></td>
+                <td><input class="inp inp-red" type="number" id="att-late-${e.id}" value="${att[e.id]?.lateMinutes??0}" min="0" style="width:70px;" oninput="updateAttPreview('${e.id}')" ${d1}><div id="att-late-sub-${e.id}" class="att-sub att-sub-red">—</div></td>
+                <td><input class="inp inp-green" type="number" id="att-add-${e.id}" value="${att[e.id]?.additions??0}" min="0" style="width:80px;" oninput="updateAttPreview('${e.id}')" ${d1}><div id="att-add-sub-${e.id}" class="att-sub att-sub-green">—</div></td>
+                <td><input class="inp inp-red" type="number" id="att-ded-${e.id}" value="${att[e.id]?.deductions??0}" min="0" style="width:80px;" oninput="updateAttPreview('${e.id}')" ${d1}><div id="att-ded-sub-${e.id}" class="att-sub att-sub-red">—</div></td>
                 <td style="font-family:var(--mono);font-weight:600;color:var(--green);white-space:nowrap;" id="att-preview-${e.id}">—</td>
-              </tr>`).join(''):`<tr><td colspan="9"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`}
+              </tr>`;}).join(''):`<tr><td colspan="9"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`}
           </tbody>
         </table>
       </div>
@@ -1308,7 +1326,39 @@ function saveAttendance(){
       deductions:parseFloat(document.getElementById('att-ded-'+e.id)?.value)||0
     };
   });
-  saveData(); alert(t('msg_save_att'));
+  syncAttToPayroll(month);
+  saveData(); alert(t('msg_att_synced'));
+}
+
+function syncAttToPayroll(month){
+  if(!payrollRecords[month]) return;
+  const dd=daysInMonth(month);
+  const att=attendanceRecords[month]||{};
+  employees.filter(e=>e.status==='active').forEach(e=>{
+    const rec=payrollRecords[month][e.id];
+    if(!rec||rec.status==='paid') return;
+    const incPaid=(rec.incentiveStatus||'pending')==='paid';
+    const workDays=att[e.id]?.workDays??dd;
+    const absentDays=att[e.id]?.absentDays??0;
+    const lateMinutes=att[e.id]?.lateMinutes??0;
+    const additions=att[e.id]?.additions??0;
+    const extraDed=att[e.id]?.deductions??0;
+    const otHours=incPaid?rec.otHours:(att[e.id]?.otHours??0);
+    const otPay=incPaid?rec.otPay:calcOT(e,otHours,dd);
+    const {total:commPay,breakdown:commBreakdown}=incPaid?{total:rec.commPay,breakdown:rec.commBreakdown}:calcCommission(e,month);
+    const dailyRate=Number(e.salary||0)/dd;
+    const minuteRate=dailyRate/(8*60);
+    const proratedBase=dailyRate*workDays;
+    const absentDed=dailyRate*absentDays;
+    const lateDed=minuteRate*lateMinutes;
+    const gosiDed=Number(e.salary||0)*((e.gosiEmp??9.75)/100);
+    const allowances=Number(e.housing||0)+Number(e.transport||0)+Number(e.other||0)+Number(additions);
+    const totalDed=absentDed+lateDed+gosiDed+extraDed;
+    const gross=proratedBase+allowances+otPay+commPay;
+    const net=gross-totalDed;
+    payrollRecords[month][e.id]={...rec,workDays,absentDays,lateMinutes,additions,extraDed,otHours,
+      otPay,commPay,commBreakdown,dailyRate,proratedBase,absentDed,lateDed,gosiDed,totalDed,allowances,gross,net};
+  });
 }
 
 function updateAttPreview(empId){
@@ -1374,17 +1424,19 @@ function renderCommission(){
       </div>
     </div>`;
   document.getElementById('comm-tbody').innerHTML=commEmps.map(e=>{
+    const pr=(payrollRecords[month]||{})[e.id];
+    const incPaid=(pr?.incentiveStatus||'pending')==='paid';
     const empRec=rec[e.id]||{};
     const assignedCats=e.commissionCats||[];
     const cells=commissionCategories.map(cat=>{
       const isAssigned=assignedCats.includes(cat.id);
       const val=empRec[cat.id]||0;
       return isAssigned
-        ?`<td><input class="inp inp-green" type="number" id="comm-${e.id}-${cat.id}" value="${val}" min="0" step="0.01" oninput="updateCommPreview('${e.id}')" style="width:100px;direction:ltr;"><div id="comm-sub-${e.id}-${cat.id}" class="att-sub att-sub-green">${val>0?'+'+fmtD(cat.rateType==='percent'?val*(cat.rate/100):val*cat.rate)+' SAR':'—'}</div></td>`
+        ?`<td><input class="inp inp-green" type="number" id="comm-${e.id}-${cat.id}" value="${val}" min="0" step="0.01" oninput="updateCommPreview('${e.id}')" style="width:100px;direction:ltr;" ${incPaid?'disabled':''}><div id="comm-sub-${e.id}-${cat.id}" class="att-sub att-sub-green">${val>0?'+'+fmtD(cat.rateType==='percent'?val*(cat.rate/100):val*cat.rate)+' SAR':'—'}</div></td>`
         :`<td style="color:var(--text2);text-align:center;">—</td>`;
     }).join('');
-    return`<tr>
-      <td><div style="font-weight:500;">${e.name}</div><div style="font-size:11px;color:var(--text2);">${e.dept||''}</div></td>
+    return`<tr${incPaid?' style="opacity:0.85;"':''}>
+      <td><div style="font-weight:500;">${e.name}</div><div style="font-size:11px;color:var(--text2);">${e.dept||''}</div>${incPaid?`<span class="badge badge-inc-paid" style="font-size:9px;">${t('lbl_inc_paid')}</span>`:''}</td>
       ${cells}
       <td style="font-family:var(--mono);color:var(--green);font-weight:500;direction:ltr;" id="comm-preview-${e.id}">${fmtD(calcCommission(e,month).total)} SAR</td>
     </tr>`;
@@ -1423,7 +1475,7 @@ function saveCommission(){
   if(payrollRecords[month]){
     employees.filter(e=>e.status==='active').forEach(e=>{
       const rec=payrollRecords[month][e.id];
-      if(!rec||rec.status==='paid') return;
+      if(!rec||rec.status==='paid'||(rec.incentiveStatus||'pending')==='paid') return;
       const {total:commPay,breakdown:commBreakdown}=calcCommission(e,month);
       const gross=(rec.proratedBase??Number(e.salary||0))+(rec.allowances||0)+(rec.otPay||0)+commPay;
       const net=gross-(rec.totalDed||0);
