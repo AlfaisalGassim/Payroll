@@ -227,6 +227,10 @@
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
         <span data-i18n="nav_payroll">Payroll</span>
       </div>
+      <div class="nav-item" onclick="navigate('incentives')" style="padding-left:22px;">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span data-i18n="nav_incentives">OT & Commission</span>
+      </div>
       <div class="nav-item" onclick="navigate('attendance')">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
         <span data-i18n="nav_attendance">Attendance</span>
@@ -348,6 +352,31 @@
         </div>
         <div class="table-wrap"><table><thead><tr id="payroll-thead"></tr></thead><tbody id="payroll-tbody"></tbody></table></div>
         <div class="payroll-summary" id="payroll-summary"></div>
+      </div>
+    </div>
+
+    <!-- INCENTIVES -->
+    <div class="page" id="page-incentives">
+      <div class="page-header">
+        <div><h2 data-i18n="nav_incentives">OT & Commission</h2><p data-i18n="desc_incentives">Overtime and commission breakdown per employee</p></div>
+        <div class="month-selector">
+          <select class="select-sm" id="incentives-month-m" onchange="syncMonth('incentives-month');renderIncentives()"></select>
+          <select class="select-sm" id="incentives-month-y" onchange="syncMonth('incentives-month');renderIncentives()"></select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3 data-i18n="nav_incentives">OT & Commission</h3>
+          <div class="filter-row">
+            <div class="search-bar">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="incentives-search" data-i18n="lbl_search" oninput="renderIncentives()">
+            </div>
+            <select class="select-sm" id="incentives-dept-filter" onchange="renderIncentives()"><option value=""></option></select>
+          </div>
+        </div>
+        <div class="table-wrap"><table><thead><tr id="incentives-thead"></tr></thead><tbody id="incentives-tbody"></tbody></table></div>
+        <div class="payroll-summary" id="incentives-summary"></div>
       </div>
     </div>
 
@@ -547,6 +576,7 @@
 const i18n = {
   en: {
     nav_dashboard:'Dashboard', nav_employees:'Employees', nav_payroll:'Payroll',
+    nav_incentives:'OT & Commission', desc_incentives:'Overtime and commission breakdown per employee',
     nav_attendance:'Attendance', nav_commission:'Commission', nav_payslips:'Payslips',
     nav_reports:'Reports', nav_settings:'Settings', nav_ot_formula:'OT Formula',
     nav_comm_cats:'Comm. Categories',
@@ -644,6 +674,7 @@ const i18n = {
   },
   ar: {
     nav_dashboard:'لوحة التحكم', nav_employees:'الموظفون', nav_payroll:'الرواتب',
+    nav_incentives:'الإضافي والعمولات', desc_incentives:'تفصيل الوقت الإضافي والعمولات لكل موظف',
     nav_attendance:'الحضور', nav_commission:'العمولات', nav_payslips:'قسائم الراتب',
     nav_reports:'التقارير', nav_settings:'الإعدادات', nav_ot_formula:'معادلة الإضافي',
     nav_comm_cats:'فئات العمولة',
@@ -770,6 +801,7 @@ function applyLang() {
     if(activePage==='dashboard') renderDashboard();
     else if(activePage==='employees') renderEmployees();
     else if(activePage==='payroll') renderPayroll();
+    else if(activePage==='incentives') renderIncentives();
     else if(activePage==='attendance') renderAttendance();
     else if(activePage==='commission') renderCommission();
     else if(activePage==='payslips') renderPayslipList();
@@ -874,13 +906,14 @@ function navigate(page) {
     const fn=n.getAttribute('onclick')||'';
     if(fn.includes("'"+page+"'")) n.classList.add('active');
   });
-  if(page==='dashboard')  renderDashboard();
-  if(page==='employees')  renderEmployees();
-  if(page==='payroll')    renderPayroll();
-  if(page==='attendance') renderAttendance();
-  if(page==='commission') renderCommission();
-  if(page==='payslips')   renderPayslipList();
-  if(page==='reports')    renderReports();
+  if(page==='dashboard')   renderDashboard();
+  if(page==='employees')   renderEmployees();
+  if(page==='payroll')     renderPayroll();
+  if(page==='incentives')  renderIncentives();
+  if(page==='attendance')  renderAttendance();
+  if(page==='commission')  renderCommission();
+  if(page==='payslips')    renderPayslipList();
+  if(page==='reports')     renderReports();
 }
 
 // ── Dashboard ──────────────────────────────────────────
@@ -1111,14 +1144,14 @@ function renderPayroll(){
   const hasRec=Object.keys(records).length>0;
   document.getElementById('btn-process').style.display=hasRec?'none':'inline-flex';
   document.getElementById('btn-regen').style.display=hasRec?'inline-flex':'none';
-  document.getElementById('payroll-thead').innerHTML=`<th>${t('col_emp')}</th><th>${t('col_dept')}</th><th>${t('col_base')}</th><th>${t('col_allowances')}</th><th>${t('col_ot')}</th><th>${t('col_commission')}</th><th>${t('col_deductions')}</th><th>${t('col_net')}</th><th>${t('col_status')}</th><th>${t('col_actions')}</th>`;
+  document.getElementById('payroll-thead').innerHTML=`<th>${t('col_emp')}</th><th>${t('col_dept')}</th><th>${t('col_base')}</th><th>${t('col_allowances')}</th><th>${t('col_deductions')}</th><th>${t('col_net')}</th><th>${t('col_status')}</th><th>${t('col_actions')}</th>`;
   const tbody=document.getElementById('payroll-tbody');
   const activeEmps=employees.filter(e=>e.status==='active');
   if(!month||!hasRec){
-    tbody.innerHTML=`<tr><td colspan="10"><div class="empty">${t('lbl_no_records')}</div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="8"><div class="empty">${t('lbl_no_records')}</div></td></tr>`;
     document.getElementById('payroll-summary').innerHTML=''; return;
   }
-  let tGross=0,tNet=0,tDed=0,tOT=0,tComm=0,count=0;
+  let tGross=0,tNet=0,tDed=0,count=0;
   const rows=activeEmps.filter(e=>records[e.id]
     &&(!sf||records[e.id].status===sf)
     &&(!df||e.dept===df)
@@ -1126,14 +1159,12 @@ function renderPayroll(){
   );
   tbody.innerHTML=rows.map(e=>{
     const r=records[e.id];
-    tGross+=r.gross;tNet+=r.net;tDed+=r.totalDed;tOT+=r.otPay||0;tComm+=r.commPay||0;count++;
+    tGross+=r.gross;tNet+=r.net;tDed+=r.totalDed;count++;
     return`<tr>
       <td><div style="font-weight:500;">${e.name}</div><div style="font-size:11px;color:var(--text2);">${e.empId||''}</div></td>
       <td style="color:var(--text2);">${e.dept||'—'}</td>
       <td style="font-family:var(--mono);direction:ltr;text-align:start;">${fmt(e.salary)}</td>
       <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">+${fmt(r.allowances)}</td>
-      <td style="font-family:var(--mono);color:var(--amber);direction:ltr;text-align:start;">${r.otHours>0?`+${fmtD(r.otPay)} (${r.otHours}h)`:'—'}</td>
-      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">${r.commPay>0?`+${fmtD(r.commPay)}`:'—'}</td>
       <td style="font-family:var(--mono);color:var(--red);direction:ltr;text-align:start;">-${fmt(r.totalDed)}</td>
       <td style="font-family:var(--mono);font-weight:500;direction:ltr;text-align:start;">${fmt(r.net)}</td>
       <td><span class="badge ${r.status==='paid'?'badge-paid':'badge-pending'}">${t('lbl_'+r.status)}</span></td>
@@ -1142,14 +1173,54 @@ function renderPayroll(){
         <button class="btn btn-secondary btn-sm" onclick="viewSlip('${e.id}','${month}')">📄</button>
       </div></td>
     </tr>`;
-  }).join('')||`<tr><td colspan="10"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`;
+  }).join('')||`<tr><td colspan="8"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`;
   document.getElementById('payroll-summary').innerHTML=`
     <div class="ps-item"><div class="ps-label">${t('lbl_employees')}</div><div class="ps-val">${count}</div></div>
     <div class="ps-item"><div class="ps-label">${t('lbl_total_gross')}</div><div class="ps-val">${fmt(tGross)} SAR</div></div>
-    <div class="ps-item"><div class="ps-label">${t('lbl_ot')}</div><div class="ps-val amber">+${fmtD(tOT)} SAR</div></div>
-    <div class="ps-item"><div class="ps-label">${t('nav_commission')}</div><div class="ps-val green">+${fmtD(tComm)} SAR</div></div>
     <div class="ps-item"><div class="ps-label">${t('lbl_deductions')}</div><div class="ps-val red">-${fmt(tDed)} SAR</div></div>
     <div class="ps-item"><div class="ps-label">${t('lbl_net_pay')}</div><div class="ps-val green">${fmt(tNet)} SAR</div></div>`;
+}
+
+function renderIncentives(){
+  const month=getMonthVal('incentives-month');
+  const deptSel=document.getElementById('incentives-dept-filter');
+  const df=deptSel?.value||'';
+  const depts=[...new Set(employees.filter(e=>e.status==='active'&&e.dept).map(e=>e.dept))].sort();
+  if(deptSel) deptSel.innerHTML=`<option value="">${t('lbl_all_depts')}</option>`+depts.map(d=>`<option value="${d}" ${d===df?'selected':''}>${d}</option>`).join('');
+  const search=(document.getElementById('incentives-search')?.value||'').toLowerCase();
+  const records=payrollRecords[month]||{};
+  const hasRec=Object.keys(records).length>0;
+  document.getElementById('incentives-thead').innerHTML=`<th>${t('col_emp')}</th><th>${t('col_dept')}</th><th>${t('col_ot')}</th><th>${t('lbl_ot_hours')}</th><th>${t('col_commission')}</th><th>${t('col_net')}</th>`;
+  const tbody=document.getElementById('incentives-tbody');
+  const activeEmps=employees.filter(e=>e.status==='active');
+  if(!month||!hasRec){
+    tbody.innerHTML=`<tr><td colspan="6"><div class="empty">${t('lbl_no_records')}</div></td></tr>`;
+    document.getElementById('incentives-summary').innerHTML=''; return;
+  }
+  const rows=activeEmps.filter(e=>records[e.id]
+    &&(!df||e.dept===df)
+    &&(!search||e.name.toLowerCase().includes(search)||(e.empId||'').toLowerCase().includes(search))
+  );
+  let tOT=0,tComm=0,count=0;
+  tbody.innerHTML=rows.map(e=>{
+    const r=records[e.id];
+    const hasOT=Number(r.otPay||0)>0, hasComm=Number(r.commPay||0)>0;
+    if(!hasOT&&!hasComm) return'';
+    tOT+=r.otPay||0; tComm+=r.commPay||0; count++;
+    return`<tr>
+      <td><div style="font-weight:500;">${e.name}</div><div style="font-size:11px;color:var(--text2);">${e.empId||''}</div></td>
+      <td style="color:var(--text2);">${e.dept||'—'}</td>
+      <td style="font-family:var(--mono);color:var(--amber);direction:ltr;text-align:start;">${hasOT?'+'+fmtD(r.otPay)+' SAR':'—'}</td>
+      <td style="color:var(--text2);">${hasOT?r.otHours+'h':'—'}</td>
+      <td style="font-family:var(--mono);color:var(--green);direction:ltr;text-align:start;">${hasComm?'+'+fmtD(r.commPay)+' SAR':'—'}</td>
+      <td style="font-family:var(--mono);font-weight:500;color:var(--amber);direction:ltr;text-align:start;">+${fmtD((r.otPay||0)+(r.commPay||0))} SAR</td>
+    </tr>`;
+  }).filter(Boolean).join('')||`<tr><td colspan="6"><div class="empty">${t('lbl_no_employees')}</div></td></tr>`;
+  document.getElementById('incentives-summary').innerHTML=`
+    <div class="ps-item"><div class="ps-label">${t('lbl_employees')}</div><div class="ps-val">${count}</div></div>
+    <div class="ps-item"><div class="ps-label">${t('lbl_ot')}</div><div class="ps-val amber">+${fmtD(tOT)} SAR</div></div>
+    <div class="ps-item"><div class="ps-label">${t('nav_commission')}</div><div class="ps-val green">+${fmtD(tComm)} SAR</div></div>
+    <div class="ps-item"><div class="ps-label">${t('col_net')}</div><div class="ps-val green">+${fmtD(tOT+tComm)} SAR</div></div>`;
 }
 
 function markPaid(month,empId){
@@ -1605,7 +1676,7 @@ function saveCatSettings(){
 }
 
 // ── Init ───────────────────────────────────────────────
-const MONTH_PREFIXES=['payroll-month','att-month','slip-month','comm-month'];
+const MONTH_PREFIXES=['payroll-month','incentives-month','att-month','slip-month','comm-month'];
 function syncMonth(sourcePrefix){
   const m=document.getElementById(sourcePrefix+'-m')?.value;
   const y=document.getElementById(sourcePrefix+'-y')?.value;
@@ -1626,7 +1697,7 @@ function initYearSelector(){
 function initMonthDropdowns(update=false){
   const now=new Date(),curM=now.getMonth(),curY=now.getFullYear();
   const months=lang==='ar'?MONTHS_AR:MONTHS_EN;
-  const pairs=[['payroll-month-m','payroll-month-y'],['att-month-m','att-month-y'],['slip-month-m','slip-month-y'],['comm-month-m','comm-month-y']];
+  const pairs=[['payroll-month-m','payroll-month-y'],['incentives-month-m','incentives-month-y'],['att-month-m','att-month-y'],['slip-month-m','slip-month-y'],['comm-month-m','comm-month-y']];
   pairs.forEach(([mId,yId])=>{
     const ms=document.getElementById(mId),ys=document.getElementById(yId);
     if(!ms||!ys) return;
