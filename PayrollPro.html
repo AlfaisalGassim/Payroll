@@ -1336,13 +1336,16 @@ function syncAttToPayroll(month){
   const att=attendanceRecords[month]||{};
   employees.filter(e=>e.status==='active').forEach(e=>{
     const rec=payrollRecords[month][e.id];
-    if(!rec||rec.status==='paid') return;
+    if(!rec) return;
+    const basePaid=rec.status==='paid';
     const incPaid=(rec.incentiveStatus||'pending')==='paid';
-    const workDays=att[e.id]?.workDays??dd;
-    const absentDays=att[e.id]?.absentDays??0;
-    const lateMinutes=att[e.id]?.lateMinutes??0;
-    const additions=att[e.id]?.additions??0;
-    const extraDed=att[e.id]?.deductions??0;
+    if(basePaid&&incPaid) return;
+    // Use locked values for paid tiers; live values otherwise
+    const workDays=basePaid?rec.workDays:(att[e.id]?.workDays??dd);
+    const absentDays=basePaid?rec.absentDays:(att[e.id]?.absentDays??0);
+    const lateMinutes=basePaid?rec.lateMinutes:(att[e.id]?.lateMinutes??0);
+    const additions=basePaid?rec.additions:(att[e.id]?.additions??0);
+    const extraDed=basePaid?rec.extraDed:(att[e.id]?.deductions??0);
     const otHours=incPaid?rec.otHours:(att[e.id]?.otHours??0);
     const otPay=incPaid?rec.otPay:calcOT(e,otHours,dd);
     const {total:commPay,breakdown:commBreakdown}=incPaid?{total:rec.commPay,breakdown:rec.commBreakdown}:calcCommission(e,month);
@@ -1475,7 +1478,7 @@ function saveCommission(){
   if(payrollRecords[month]){
     employees.filter(e=>e.status==='active').forEach(e=>{
       const rec=payrollRecords[month][e.id];
-      if(!rec||rec.status==='paid'||(rec.incentiveStatus||'pending')==='paid') return;
+      if(!rec||(rec.incentiveStatus||'pending')==='paid') return;
       const {total:commPay,breakdown:commBreakdown}=calcCommission(e,month);
       const gross=(rec.proratedBase??Number(e.salary||0))+(rec.allowances||0)+(rec.otPay||0)+commPay;
       const net=gross-(rec.totalDed||0);
