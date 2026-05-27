@@ -2371,8 +2371,8 @@ function exportPayrollExcel(){
       const r=records[e.id];
       push([
         e.name,e.empId||'',e.dept||'',
-        Number(r.salary??e.salary||0),`${r.workDays} / ${dd}`,r.proratedBase||0,
-        Number(r.housing??e.housing||0),Number(r.transport??e.transport||0),Number(r.other??e.other||0),r.additions||0,r.allowances||0,
+        Number(r.salary??e.salary??0),`${r.workDays} / ${dd}`,r.proratedBase||0,
+        Number(r.housing??e.housing??0),Number(r.transport??e.transport??0),Number(r.other??e.other??0),r.additions||0,r.allowances||0,
         r.otHours||0,r.otPay||0,r.commPay||0,
         Number(r.gosiEmp??e.gosiEmp??9.75),r.gosiDed||0,
         r.absentDays||0,r.absentDed||0,
