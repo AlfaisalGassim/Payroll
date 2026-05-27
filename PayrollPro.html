@@ -699,6 +699,7 @@ const i18n = {
     btn_mark_inc_paid:'Mark OT/Comm Paid',
     lbl_inc_paid:'OT/Comm Paid', lbl_inc_pending:'OT/Comm Pending',
     lbl_monthly:'Monthly', lbl_daily_rate:'Daily Rate', lbl_prorated:'Prorated Base',
+    lbl_formula:'Formula', lbl_multiplier:'Multiplier',
     lbl_other_allow:'Other Allowance', lbl_total:'Total',
     msg_att_synced:'Attendance saved and payroll updated.',
     btn_export_employees:'Export Employees',
@@ -809,6 +810,7 @@ const i18n = {
     btn_mark_inc_paid:'تأكيد دفع الإضافي/العمولة',
     lbl_inc_paid:'الإضافي/العمولة مدفوع', lbl_inc_pending:'الإضافي/العمولة معلق',
     lbl_monthly:'شهري', lbl_daily_rate:'المعدل اليومي', lbl_prorated:'الراتب المحتسب',
+    lbl_formula:'الصيغة', lbl_multiplier:'المضاعف',
     lbl_other_allow:'بدلات أخرى', lbl_total:'الإجمالي',
     msg_att_synced:'تم حفظ الحضور وتحديث الرواتب.',
     btn_export_employees:'تصدير الموظفين',
@@ -930,7 +932,10 @@ function buildDedTip(e,r){
 }
 function buildOTTip(r){
   const rows=Number(r.otHours||0)>0
-    ?[tipRow(t('lbl_ot_hours'),r.otHours+'h'),tipRow(t('col_ot'),'+'+fmtD(r.otPay)+' SAR','amber total')]
+    ?[tipRow(t('lbl_ot_hours'),r.otHours+'h'),
+      tipRow(t('lbl_formula'),r.otFormuleName||'Default'),
+      tipRow(t('lbl_multiplier'),fmtD(r.otMultiplierSnap??1.5)+'×'),
+      tipRow(t('col_ot'),'+'+fmtD(r.otPay)+' SAR','amber total')]
     :[tipRow('—','')];
   return`<div class="pay-tip-title">${t('col_ot')}</div>`+rows.join('');
 }
@@ -1166,6 +1171,8 @@ function syncEmployeeToPayroll(emp){
       const net=gross-totalDed;
       payrollRecords[month][emp.id]={...rec,
         salary:Number(emp.salary||0),housing:Number(emp.housing||0),transport:Number(emp.transport||0),other:Number(emp.other||0),gosiEmp:emp.gosiEmp??9.75,
+        otFormuleName:(otFormulas.find(x=>x.id===(emp.otFormulaId||''))||otFormulas[0])?.name||'Default',
+        otMultiplierSnap:(otFormulas.find(x=>x.id===(emp.otFormulaId||''))||otFormulas[0])?.multiplier??1.5,
         workDays,absentDays,lateMinutes,additions,extraDed,
         otHours,otPay,commPay,commBreakdown,dailyRate,proratedBase,absentDed,lateDed,
         gosiDed,totalDed,allowances,gross,net};
@@ -1282,6 +1289,8 @@ function processPayroll(){
         status:'pending', paidAt:null,
         incentiveStatus:'pending', incentivePaidAt:null,
         salary:Number(e.salary||0),housing:Number(e.housing||0),transport:Number(e.transport||0),other:Number(e.other||0),gosiEmp:e.gosiEmp??9.75,
+        otFormuleName:(otFormulas.find(x=>x.id===(e.otFormulaId||''))||otFormulas[0])?.name||'Default',
+        otMultiplierSnap:(otFormulas.find(x=>x.id===(e.otFormulaId||''))||otFormulas[0])?.multiplier??1.5,
         workDays,absentDays,lateMinutes,additions,extraDed,otHours,otPay,commPay,commBreakdown,
         dailyRate,proratedBase,absentDed,lateDed,gosiDed,totalDed,allowances,gross,net,
         processedAt:new Date().toISOString()
@@ -1711,7 +1720,12 @@ function viewSlip(empId,month){
   const [yr,mo]=month.split('-');
   const locale=lang==='ar'?'ar-SA-u-ca-gregory-nu-latn':'en-SA-u-ca-gregory-nu-latn';
   const monthName=new Date(yr,parseInt(mo)-1,1).toLocaleString(locale,{month:'long',year:'numeric'});
-  const gosiAmt=Number(e.salary||0)*((e.gosiEmp??9.75)/100);
+  const _salary=r.salary??Number(e.salary||0);
+  const _housing=r.housing??Number(e.housing||0);
+  const _transport=r.transport??Number(e.transport||0);
+  const _other=r.other??Number(e.other||0);
+  const _gosiEmp=r.gosiEmp??e.gosiEmp??9.75;
+  const gosiAmt=_salary*(_gosiEmp/100);
   const commRows=(r.commBreakdown||[]).map(b=>`
     <div class="payslip-row">
       <span>${b.name} (${b.rateType==='percent'?fmtD(b.value)+' SAR × '+b.rate+'%':b.value+' × '+b.rate+' SAR'})</span>
@@ -1734,10 +1748,10 @@ function viewSlip(empId,month){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
         <div class="payslip-section">
           <h4>${t('lbl_earnings')}</h4>
-          <div class="payslip-row"><span>${t('lbl_base')}${r.workDays<daysInMonth(month)?` (${r.workDays}/${daysInMonth(month)} ${t('lbl_work_days')})`:''}</span><span>${fmt(r.proratedBase??e.salary)} SAR</span></div>
-          <div class="payslip-row"><span>${t('lbl_housing')}</span><span>${fmt(e.housing)} SAR</span></div>
-          <div class="payslip-row"><span>${t('lbl_transport')}</span><span>${fmt(e.transport)} SAR</span></div>
-          ${Number(e.other)>0?`<div class="payslip-row"><span>${t('lbl_other')}</span><span>${fmt(e.other)} SAR</span></div>`:''}
+          <div class="payslip-row"><span>${t('lbl_base')}${r.workDays<daysInMonth(month)?` (${r.workDays}/${daysInMonth(month)} ${t('lbl_work_days')})`:''}</span><span>${fmt(r.proratedBase??_salary)} SAR</span></div>
+          <div class="payslip-row"><span>${t('lbl_housing')}</span><span>${fmt(_housing)} SAR</span></div>
+          <div class="payslip-row"><span>${t('lbl_transport')}</span><span>${fmt(_transport)} SAR</span></div>
+          ${_other>0?`<div class="payslip-row"><span>${t('lbl_other')}</span><span>${fmt(_other)} SAR</span></div>`:''}
           ${Number(r.additions)>0?`<div class="payslip-row"><span>${t('lbl_additional')}</span><span>${fmtD(r.additions)} SAR</span></div>`:''}
           ${Number(r.otPay)>0?`<div class="payslip-row"><span>${t('lbl_overtime')} (${r.otHours}h)</span><span style="color:var(--green-dark);font-weight:500;">${fmtD(r.otPay)} SAR</span></div>`:''}
           ${commRows}
@@ -1745,7 +1759,7 @@ function viewSlip(empId,month){
         </div>
         <div class="payslip-section">
           <h4>${t('lbl_deductions')}</h4>
-          <div class="payslip-row"><span>GOSI (${e.gosiEmp??9.75}%)</span><span>${fmtD(gosiAmt)} SAR</span></div>
+          <div class="payslip-row"><span>GOSI (${_gosiEmp}%)</span><span>${fmtD(gosiAmt)} SAR</span></div>
           ${Number(r.absentDed)>0?`<div class="payslip-row"><span>${t('lbl_absent')} (${r.absentDays}d)</span><span>${fmtD(r.absentDed)} SAR</span></div>`:''}
           ${Number(r.lateDed)>0?`<div class="payslip-row"><span>${t('lbl_late_ded')} (${r.lateMinutes}min)</span><span>${fmtD(r.lateDed)} SAR</span></div>`:''}
           ${Number(r.extraDed)>0?`<div class="payslip-row"><span>${t('lbl_other_ded')}</span><span>${fmtD(r.extraDed)} SAR</span></div>`:''}
@@ -2070,7 +2084,7 @@ function exportPayrollPDF(){
       const dedTip=`GOSI: ${fmtD(r.gosiDed||0)}${r.absentDed>0?` | Absent: ${fmtD(r.absentDed)}`:''}${r.lateDed>0?` | Late: ${fmtD(r.lateDed)}`:''}${r.extraDed>0?` | Other: ${fmtD(r.extraDed)}`:''}`;
       return`<tr>
         <td><span class="bold">${e.name}</span><br><span class="sub">${e.empId||''}${e.dept?` · ${e.dept}`:''}</span></td>
-        <td class="r mono">${fmt(e.salary)}</td>
+        <td class="r mono">${fmt(r.salary??e.salary)}</td>
         <td class="r mono">${fmt(r.workDays)} / ${dd}</td>
         <td class="r mono">${fmtD(r.proratedBase||0)}</td>
         <td class="r mono green">${r.allowances>0?'+'+fmtD(r.allowances):'—'}</td>
@@ -2357,10 +2371,10 @@ function exportPayrollExcel(){
       const r=records[e.id];
       push([
         e.name,e.empId||'',e.dept||'',
-        Number(e.salary||0),`${r.workDays} / ${dd}`,r.proratedBase||0,
-        Number(e.housing||0),Number(e.transport||0),Number(e.other||0),r.additions||0,r.allowances||0,
+        Number(r.salary??e.salary||0),`${r.workDays} / ${dd}`,r.proratedBase||0,
+        Number(r.housing??e.housing||0),Number(r.transport??e.transport||0),Number(r.other??e.other||0),r.additions||0,r.allowances||0,
         r.otHours||0,r.otPay||0,r.commPay||0,
-        Number(e.gosiEmp??9.75),r.gosiDed||0,
+        Number(r.gosiEmp??e.gosiEmp??9.75),r.gosiDed||0,
         r.absentDays||0,r.absentDed||0,
         r.lateMinutes||0,r.lateDed||0,
         r.extraDed||0,r.totalDed||0,
