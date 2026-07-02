@@ -278,6 +278,7 @@
         <button class="data-btn" onclick="exportData()" data-i18n="btn_export">Export</button>
         <label class="data-btn" style="cursor:pointer;"><span data-i18n="btn_import">Import</span><input type="file" accept=".json" style="display:none" onchange="importData(event)"></label>
       </div>
+      <button onclick="openClearModal()" style="margin-top:8px;width:100%;padding:6px 8px;font-size:11px;background:transparent;border:1px solid #fca5a5;color:var(--red);border-radius:var(--radius);cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='transparent'" data-i18n="btn_clear_data">Clear All Data</button>
     </div>
   </div>
 
@@ -597,6 +598,44 @@
   </div>
 </div>
 
+<!-- Clear All Data Modal -->
+<div class="modal-overlay" id="clear-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header" style="border-bottom-color:#fca5a5;">
+      <h3 style="color:var(--red);" data-i18n="modal_clear_title">Clear All Data</h3>
+      <button class="modal-close" onclick="closeClearModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:20px;">
+        <div style="flex-shrink:0;width:40px;height:40px;background:#fef2f2;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;">⚠️</div>
+        <div>
+          <div style="font-weight:600;margin-bottom:6px;color:var(--text);" data-i18n="msg_clear_warning_title">This action is permanent and cannot be undone.</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.6;" data-i18n="msg_clear_warning_body">All employees, payroll records, attendance, commissions, OT formulas, and settings will be erased. After clearing you will be asked to import a backup file to restore your data.</div>
+        </div>
+      </div>
+      <div style="background:var(--bg3);border-radius:var(--radius);padding:12px 14px;margin-bottom:20px;font-size:12px;color:var(--text2);">
+        <div style="font-weight:600;margin-bottom:6px;color:var(--text);" data-i18n="lbl_will_be_deleted">What will be deleted:</div>
+        <ul style="margin:0;padding-left:16px;line-height:2;">
+          <li data-i18n="lbl_clear_emp">Employees &amp; settings</li>
+          <li data-i18n="lbl_clear_payroll">All payroll records</li>
+          <li data-i18n="lbl_clear_att">Attendance data</li>
+          <li data-i18n="lbl_clear_comm">Commission records</li>
+          <li data-i18n="lbl_clear_ot">OT formulas &amp; categories</li>
+        </ul>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:13px;font-weight:600;color:var(--red);" data-i18n="lbl_type_clear">Type CLEAR to confirm</label>
+        <input id="clear-confirm-input" class="inp" type="text" placeholder="CLEAR" oninput="document.getElementById('clear-confirm-btn').disabled=this.value!=='CLEAR'" style="border-color:#fca5a5;margin-top:6px;">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeClearModal()" data-i18n="btn_cancel">Cancel</button>
+      <button class="btn btn-danger" id="clear-confirm-btn" onclick="doClearAndImport()" disabled data-i18n="btn_clear_confirm">Clear & Import</button>
+      <input type="file" id="clear-import-input" accept=".json" style="display:none" onchange="clearImportFile(event)">
+    </div>
+  </div>
+</div>
+
 <script>
 // ── i18n ───────────────────────────────────────────────
 const i18n = {
@@ -682,6 +721,14 @@ const i18n = {
     msg_delete_emp:'Delete this employee?',
     msg_cannot_delete_emp:'This employee has at least one paid payroll record and cannot be deleted. Set them to Inactive instead.',
     msg_save_att:'Attendance saved!', msg_save_comm:'Commission saved!',
+    btn_clear_data:'Clear All Data', btn_clear_confirm:'Clear & Import',
+    modal_clear_title:'Clear All Data',
+    msg_clear_warning_title:'This action is permanent and cannot be undone.',
+    msg_clear_warning_body:'All employees, payroll records, attendance, commissions, OT formulas, and settings will be erased. After clearing you will be asked to import a backup file to restore your data.',
+    lbl_will_be_deleted:'What will be deleted:', lbl_type_clear:'Type CLEAR to confirm',
+    lbl_clear_emp:'Employees & settings', lbl_clear_payroll:'All payroll records',
+    lbl_clear_att:'Attendance data', lbl_clear_comm:'Commission records', lbl_clear_ot:'OT formulas & categories',
+    msg_clear_done:'All data cleared. Please import a backup file.',
     msg_imported:'Imported successfully!', msg_invalid_file:'Invalid file',
     msg_select_month:'Select a month', msg_no_employees:'No employees found',
     msg_paid_warning:'Some employees are already paid. Regenerating keeps their paid status but recalculates amounts. Continue?',
@@ -793,6 +840,14 @@ const i18n = {
     msg_delete_emp:'حذف هذا الموظف؟',
     msg_cannot_delete_emp:'لا يمكن حذف هذا الموظف لوجود راتب مدفوع مسجّل باسمه. يمكنك تعيينه كـ "غير نشط" عوضاً عن ذلك.',
     msg_save_att:'تم حفظ الحضور!', msg_save_comm:'تم حفظ العمولة!',
+    btn_clear_data:'مسح جميع البيانات', btn_clear_confirm:'مسح واستيراد',
+    modal_clear_title:'مسح جميع البيانات',
+    msg_clear_warning_title:'هذا الإجراء دائم ولا يمكن التراجع عنه.',
+    msg_clear_warning_body:'سيتم مسح جميع الموظفين وسجلات الرواتب والحضور والعمولات ومعادلات الإضافي والإعدادات. بعد المسح سيُطلب منك استيراد ملف نسخة احتياطية.',
+    lbl_will_be_deleted:'ما سيتم حذفه:', lbl_type_clear:'اكتب CLEAR للتأكيد',
+    lbl_clear_emp:'الموظفون والإعدادات', lbl_clear_payroll:'جميع سجلات الرواتب',
+    lbl_clear_att:'بيانات الحضور', lbl_clear_comm:'سجلات العمولات', lbl_clear_ot:'معادلات الإضافي والفئات',
+    msg_clear_done:'تم مسح جميع البيانات. يرجى استيراد ملف نسخة احتياطية.',
     msg_imported:'تم الاستيراد بنجاح!', msg_invalid_file:'ملف غير صالح',
     msg_select_month:'اختر الشهر', msg_no_employees:'لا يوجد موظفون',
     msg_paid_warning:'بعض الموظفين تم صرف رواتبهم. إعادة الحساب تحتفظ بحالة الصرف وتعيد الحساب. هل تريد المتابعة؟',
@@ -991,6 +1046,45 @@ function exportData() {
   a.download='payrollpro_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
 }
 function importData(ev) {
+  const file=ev.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try {
+      const d=JSON.parse(e.target.result);
+      employees=d.employees||[]; payrollRecords=d.payrollRecords||{};
+      attendanceRecords=d.attendanceRecords||{}; commissionRecords=d.commissionRecords||{};
+      commissionCategories=d.commissionCategories||[];
+      loadOtFormulas(d);
+      saveData(); navigate('dashboard'); alert(t('msg_imported'));
+    } catch { alert(t('msg_invalid_file')); }
+  };
+  r.readAsText(file);
+}
+
+function openClearModal(){
+  document.getElementById('clear-confirm-input').value='';
+  document.getElementById('clear-confirm-btn').disabled=true;
+  document.getElementById('clear-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('clear-confirm-input').focus(),80);
+}
+function closeClearModal(){
+  document.getElementById('clear-modal').classList.remove('open');
+}
+function doClearAndImport(){
+  if(document.getElementById('clear-confirm-input').value!=='CLEAR') return;
+  // Wipe all data
+  employees=[]; payrollRecords={}; attendanceRecords={}; commissionRecords={};
+  commissionCategories=[]; otFormulas=[{id:'default',name:'Default',formula:'hourlyRate * otHours * otMultiplier',multiplier:1.5}];
+  localStorage.removeItem('payrollpro_v2');
+  localStorage.removeItem('payrollpro_data');
+  closeClearModal();
+  navigate('dashboard');
+  // Force import immediately
+  alert(t('msg_clear_done'));
+  document.getElementById('clear-import-input').value='';
+  document.getElementById('clear-import-input').click();
+}
+function clearImportFile(ev){
   const file=ev.target.files[0]; if(!file) return;
   const r=new FileReader();
   r.onload=e=>{
