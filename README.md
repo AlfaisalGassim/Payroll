@@ -1,5 +1,7 @@
 # PayrollPro
 
+**English** | [العربية](README.ar.md)
+
 A single-file, browser-based HR and payroll management system for small and medium businesses. No server, no installation — open the HTML file and start working. All data is stored locally in the browser.
 
 ## Features
