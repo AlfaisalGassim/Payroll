@@ -88,3 +88,7 @@ Both paid    → record is fully locked; no changes affect it
 ```
 
 OT & Commission cannot be marked paid unless base salary is already paid for that month.
+
+## Copyright
+
+© 2026 Alfaisal Gassim. All rights reserved.
