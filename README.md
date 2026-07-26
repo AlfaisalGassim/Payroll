@@ -2,7 +2,11 @@
 
 **English** | [العربية](README.ar.md)
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 A single-file, browser-based HR and payroll management system for small and medium businesses. No server, no installation — open the HTML file and start working. All data is stored locally in the browser.
+
+**▶ [Try the live demo](https://alfaisalgassim.github.io/SalaryCal/)** — no signup, nothing is uploaded; all data stays in your browser.
 
 ## Features
 
@@ -64,14 +68,16 @@ A single-file, browser-based HR and payroll management system for small and medi
 - Toggle between languages using the button in the sidebar footer
 
 ## Technical Notes
-- **Single file**: `PayrollPro.html` — no build step, no dependencies to install
+- **Single file**: `index.html` — no build step, no dependencies to install
 - **Storage**: `localStorage` key `payrollpro_v2`
 - **Excel**: [SheetJS](https://sheetjs.com/) (xlsx 0.18.5, loaded from CDN) — requires internet connection for Excel import/export
 - **No server required**: runs entirely in the browser; all computation is client-side
 
 ## Getting Started
 
-1. Open `PayrollPro.html` in any modern browser (Chrome, Edge, Firefox, Safari)
+Either **[open the live demo](https://alfaisalgassim.github.io/SalaryCal/)**, or download `index.html` and open it locally — both work identically and store data only in your browser.
+
+1. Open the app in any modern browser (Chrome, Edge, Firefox, Safari)
 2. Go to **Employees** and add your staff, or import from the Excel template
 3. Go to **Settings → OT Formula** to configure overtime calculation rules
 4. Go to **Settings → Comm. Categories** to set up commission categories
@@ -89,6 +95,21 @@ Both paid    → record is fully locked; no changes affect it
 
 OT & Commission cannot be marked paid unless base salary is already paid for that month.
 
-## Copyright
+## License
 
-© 2026 Alfaisal Gassim. All rights reserved.
+Copyright © 2026 **Alfaisal Gassim**
+
+This program is free software: you can redistribute it and/or modify it under the terms of the [GNU General Public License v3.0](LICENSE) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+In practical terms:
+
+- ✅ You may use, study, modify, and share it — including commercially
+- ⚠️ If you distribute a modified version, it must also be released under GPL-3.0 with its source available
+- ⚠️ The copyright notice and license must be preserved in all copies
+- ❌ It comes with **no warranty** — see sections 15 and 16 of the license
+
+The copyright holder retains full ownership. If you need to use this software under terms other than the GPL (for example, inside a closed-source commercial product), contact the author to discuss a separate commercial license.
+
+## Acknowledgements
+
+Excel import/export is powered by [SheetJS](https://sheetjs.com/) (xlsx 0.18.5), licensed under Apache-2.0 and loaded from CDN rather than bundled. Apache-2.0 is compatible with GPL-3.0.
