@@ -279,6 +279,9 @@
         <label class="data-btn" style="cursor:pointer;"><span data-i18n="btn_import">Import</span><input type="file" accept=".json" style="display:none" onchange="importData(event)"></label>
       </div>
       <button onclick="openClearModal()" style="margin-top:8px;width:100%;padding:6px 8px;font-size:11px;background:transparent;border:1px solid #fca5a5;color:var(--red);border-radius:var(--radius);cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='transparent'" data-i18n="btn_clear_data">Clear All Data</button>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);text-align:center;line-height:1.5;">
+        &copy; <span id="copyright-year"></span> Alfaisal Gassim
+      </div>
     </div>
   </div>
 
@@ -2228,6 +2231,9 @@ function exportPayrollPDF(){
         <div class="sig-box"><div class="sig-title">Approved by (Manager)</div><div class="sig-line">Name: ___________________________</div><div class="sig-line">Date: ___________________________</div></div>
       </div>
     </div>
+    <div style="margin-top:24px;padding-top:10px;border-top:1px solid #ddd;text-align:center;font-size:10px;color:#999;">
+      &copy; ${new Date().getFullYear()} Alfaisal Gassim &nbsp;·&nbsp; PayrollPro
+    </div>
   </div>`;
   _pdfOpen(`Payroll Report — ${monthLabel}`,html);
 }
@@ -2347,6 +2353,9 @@ function exportIncentivesPDF(){
         <div class="sig-box"><div class="sig-title">Reviewed by (Finance)</div><div class="sig-line">Name: ___________________________</div><div class="sig-line">Date: ___________________________</div></div>
         <div class="sig-box"><div class="sig-title">Approved by (Manager)</div><div class="sig-line">Name: ___________________________</div><div class="sig-line">Date: ___________________________</div></div>
       </div>
+    </div>
+    <div style="margin-top:24px;padding-top:10px;border-top:1px solid #ddd;text-align:center;font-size:10px;color:#999;">
+      &copy; ${new Date().getFullYear()} Alfaisal Gassim &nbsp;·&nbsp; PayrollPro
     </div>
   </div>`;
   _pdfOpen(`OT & Commission Report — ${monthLabel}`,html);
@@ -2698,6 +2707,7 @@ function importEmployees(event){
   reader.readAsArrayBuffer(file);
 }
 
+document.getElementById('copyright-year').textContent=new Date().getFullYear();
 loadData();
 initYearSelector();
 initMonthDropdowns();
