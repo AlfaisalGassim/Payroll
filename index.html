@@ -1,4 +1,23 @@
 <!DOCTYPE html>
+<!--
+  PayrollPro — HR and payroll management system
+  Copyright (C) 2026 Alfaisal Gassim
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+  Source: https://github.com/AlfaisalGassim/SalaryCal
+-->
 <html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
@@ -279,8 +298,13 @@
         <label class="data-btn" style="cursor:pointer;"><span data-i18n="btn_import">Import</span><input type="file" accept=".json" style="display:none" onchange="importData(event)"></label>
       </div>
       <button onclick="openClearModal()" style="margin-top:8px;width:100%;padding:6px 8px;font-size:11px;background:transparent;border:1px solid #fca5a5;color:var(--red);border-radius:var(--radius);cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='transparent'" data-i18n="btn_clear_data">Clear All Data</button>
-      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);text-align:center;line-height:1.5;">
-        &copy; <span id="copyright-year"></span> Alfaisal Gassim
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);text-align:center;line-height:1.6;" dir="ltr">
+        &copy; <span id="copyright-year"></span> Alfaisal Gassim<br>
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener" style="color:var(--text3);text-decoration:none;border-bottom:1px dotted var(--border2);">GPL-3.0</a>
+        &nbsp;·&nbsp;
+        <a href="https://github.com/AlfaisalGassim/SalaryCal" target="_blank" rel="noopener" style="color:var(--text3);text-decoration:none;border-bottom:1px dotted var(--border2);">Source</a>
+        &nbsp;·&nbsp;
+        <a href="#" onclick="openDisclaimer();return false;" style="color:var(--text3);text-decoration:none;border-bottom:1px dotted var(--border2);" data-i18n="lbl_disclaimer">Disclaimer</a>
       </div>
     </div>
   </div>
@@ -292,6 +316,7 @@
         <div><h2 data-i18n="nav_dashboard">Dashboard</h2><p data-i18n="desc_dashboard">Overview of your workforce &amp; payroll</p></div>
         <div id="dash-date" style="font-size:12px;color:var(--text2);"></div>
       </div>
+      <div id="backup-notice"></div>
       <div class="stats-grid" id="stats-grid"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
         <div class="card">
@@ -638,6 +663,37 @@
   </div>
 </div>
 
+<!-- First-run Disclaimer Modal (no close button — must acknowledge) -->
+<div class="modal-overlay" id="disclaimer-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 data-i18n="modal_disclaimer_title">Before you start</h3>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:18px;">
+        <div style="flex-shrink:0;width:38px;height:38px;background:var(--accent-light);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">💾</div>
+        <div style="font-size:13px;line-height:1.7;color:var(--text);font-weight:500;" data-i18n="disc_storage">Your data is saved only in this browser, on this device. Nothing is uploaded to any server — which also means nobody else can see it.</div>
+      </div>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:600;color:#92400e;margin-bottom:6px;" data-i18n="disc_lost_if_title">Your data will be gone if you:</div>
+        <ul style="margin:0;padding-inline-start:18px;font-size:12px;color:#92400e;line-height:1.9;">
+          <li data-i18n="disc_lost_1">Clear your browser history or site data</li>
+          <li data-i18n="disc_lost_2">Use private / incognito browsing</li>
+          <li data-i18n="disc_lost_3">Open the app on another browser or device</li>
+        </ul>
+      </div>
+      <div style="font-size:13px;line-height:1.7;color:var(--text);margin-bottom:14px;">
+        <strong data-i18n="disc_your_backup">You are responsible for backing up your own data.</strong>
+        <span data-i18n="disc_backup_how"> Use the Export button in the sidebar regularly to save a file, and Import to restore it.</span>
+      </div>
+      <div style="font-size:12px;line-height:1.7;color:var(--text2);border-top:1px solid var(--border);padding-top:12px;" data-i18n="disc_no_warranty">This is free software provided as-is, with no warranty of any kind. The author is not responsible for any data loss, for the accuracy of any figure it calculates, or for any decision made using it. Always verify payroll figures against your own records and current regulations.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="acceptDisclaimer()" data-i18n="btn_understand">I Understand</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── i18n ───────────────────────────────────────────────
 const i18n = {
@@ -730,6 +786,20 @@ const i18n = {
     lbl_will_be_deleted:'What will be deleted:', lbl_type_clear:'Type CLEAR to confirm',
     lbl_clear_emp:'Employees & settings', lbl_clear_payroll:'All payroll records',
     lbl_clear_att:'Attendance data', lbl_clear_comm:'Commission records', lbl_clear_ot:'OT formulas & categories',
+    modal_disclaimer_title:'Before you start',
+    disc_storage:'Your data is saved only in this browser, on this device. Nothing is uploaded to any server — which also means nobody else can see it.',
+    disc_lost_if_title:'Your data will be gone if you:',
+    disc_lost_1:'Clear your browser history or site data',
+    disc_lost_2:'Use private / incognito browsing',
+    disc_lost_3:'Open the app on another browser or device',
+    disc_your_backup:'You are responsible for backing up your own data.',
+    disc_backup_how:' Use the Export button in the sidebar regularly to save a file, and Import to restore it.',
+    disc_no_warranty:'This is free software provided as-is, with no warranty of any kind. The author is not responsible for any data loss, for the accuracy of any figure it calculates, or for any decision made using it. Always verify payroll figures against your own records and current regulations.',
+    btn_understand:'I Understand', lbl_disclaimer:'Disclaimer',
+    notice_backup_title:'You have changes that are not backed up',
+    notice_backup_body:'Your data lives only in this browser. Export a backup file so you do not lose it.',
+    btn_backup_now:'Export Backup',
+    msg_storage_blocked:'This browser is not allowing data to be saved, so your work will NOT persist when you close this page.\n\nThis usually happens in private/incognito mode or when site data is blocked.\n\nPlease export your data now to avoid losing it.',
     msg_imported:'Imported successfully!', msg_invalid_file:'Invalid file',
     msg_select_month:'Select a month', msg_no_employees:'No employees found',
     msg_paid_warning:'Some employees are already paid. Regenerating keeps their paid status but recalculates amounts. Continue?',
@@ -848,6 +918,20 @@ const i18n = {
     lbl_will_be_deleted:'ما سيتم حذفه:', lbl_type_clear:'اكتب CLEAR للتأكيد',
     lbl_clear_emp:'الموظفون والإعدادات', lbl_clear_payroll:'جميع سجلات الرواتب',
     lbl_clear_att:'بيانات الحضور', lbl_clear_comm:'سجلات العمولات', lbl_clear_ot:'معادلات الإضافي والفئات',
+    modal_disclaimer_title:'قبل أن تبدأ',
+    disc_storage:'تُحفظ بياناتك في هذا المتصفح فقط، على هذا الجهاز. لا يُرفع أي شيء إلى أي خادم — وهذا يعني أيضاً أن لا أحد غيرك يمكنه رؤيتها.',
+    disc_lost_if_title:'ستفقد بياناتك إذا:',
+    disc_lost_1:'مسحت سجل المتصفح أو بيانات الموقع',
+    disc_lost_2:'استخدمت التصفح الخاص (المتصفح المتنكر)',
+    disc_lost_3:'فتحت التطبيق على متصفح أو جهاز آخر',
+    disc_your_backup:'أنت المسؤول عن أخذ نسخ احتياطية من بياناتك.',
+    disc_backup_how:' استخدم زر التصدير في الشريط الجانبي بانتظام لحفظ ملف، وزر الاستيراد لاستعادته.',
+    disc_no_warranty:'هذا برنامج حر يُقدم كما هو دون أي ضمان من أي نوع. المؤلف غير مسؤول عن أي فقدان للبيانات، ولا عن دقة أي رقم يحسبه البرنامج، ولا عن أي قرار يُتخذ بناءً عليه. تحقق دائماً من أرقام الرواتب مقابل سجلاتك الخاصة والأنظمة السارية.',
+    btn_understand:'فهمت', lbl_disclaimer:'إخلاء المسؤولية',
+    notice_backup_title:'لديك تغييرات لم يتم أخذ نسخة احتياطية منها',
+    notice_backup_body:'بياناتك محفوزة في هذا المتصفح فقط. قم بتصدير ملف نسخة احتياطية حتى لا تفقدها.',
+    btn_backup_now:'تصدير نسخة',
+    msg_storage_blocked:'هذا المتصفح لا يسمح بحفظ البيانات، لذلك لن يتم الاحتفاظ بعملك عند إغلاق الصفحة.\n\nيحدث هذا عادةً في التصفح الخاص أو عندما تكون بيانات الموقع محجوبة.\n\nيرجى تصدير بياناتك الآن لتجنب فقدانها.',
     msg_imported:'تم الاستيراد بنجاح!', msg_invalid_file:'ملف غير صالح',
     msg_select_month:'اختر الشهر', msg_no_employees:'لا يوجد موظفون',
     msg_paid_warning:'بعض الموظفين تم صرف رواتبهم. إعادة الحساب تحتفظ بحالة الصرف وتعيد الحساب. هل تريد المتابعة؟',
@@ -1022,8 +1106,17 @@ function getMonthVal(prefix) {
 }
 
 // ── Persist ────────────────────────────────────────────
+let _storageWarned=false;
+function setDirty(v){ try{ localStorage.setItem('payrollpro_dirty', v?'1':'0'); }catch(e){} }
+function isDirty(){ try{ return localStorage.getItem('payrollpro_dirty')==='1'; }catch(e){ return false; } }
 function saveData() {
-  localStorage.setItem('payrollpro_v2', JSON.stringify({employees,payrollRecords,attendanceRecords,commissionRecords,commissionCategories,otFormulas}));
+  try {
+    localStorage.setItem('payrollpro_v2', JSON.stringify({employees,payrollRecords,attendanceRecords,commissionRecords,commissionCategories,otFormulas}));
+    setDirty(true);
+  } catch(e) {
+    if(!_storageWarned){ _storageWarned=true; alert(t('msg_storage_blocked')); }
+  }
+  renderBackupNotice();
 }
 function loadOtFormulas(d) {
   if(d.otFormulas) { otFormulas=d.otFormulas; }
@@ -1044,6 +1137,7 @@ function exportData() {
   const blob = new Blob([JSON.stringify({employees,payrollRecords,attendanceRecords,commissionRecords,commissionCategories,otFormulas},null,2)],{type:'application/json'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='payrollpro_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  setDirty(false); renderBackupNotice();
 }
 function importData(ev) {
   const file=ev.target.files[0]; if(!file) return;
@@ -1055,7 +1149,7 @@ function importData(ev) {
       attendanceRecords=d.attendanceRecords||{}; commissionRecords=d.commissionRecords||{};
       commissionCategories=d.commissionCategories||[];
       loadOtFormulas(d);
-      saveData(); navigate('dashboard'); alert(t('msg_imported'));
+      saveData(); setDirty(false); navigate('dashboard'); alert(t('msg_imported'));
     } catch { alert(t('msg_invalid_file')); }
   };
   r.readAsText(file);
@@ -1081,6 +1175,7 @@ function doClearData(){
   commissionCategories=[]; otFormulas=[{id:'default',name:'Default',formula:'hourlyRate * otHours * otMultiplier',multiplier:1.5}];
   localStorage.removeItem('payrollpro_v2');
   localStorage.removeItem('payrollpro_data');
+  setDirty(false);
   closeClearModal();
   navigate('dashboard');
 }
@@ -1115,9 +1210,33 @@ function navigate(page) {
 }
 
 // ── Dashboard ──────────────────────────────────────────
+// ── Disclaimer & backup notice ─────────────────────────
+function openDisclaimer(){ document.getElementById('disclaimer-modal').classList.add('open'); }
+function acceptDisclaimer(){
+  try{ localStorage.setItem('payrollpro_ack_v1','1'); }catch(e){}
+  document.getElementById('disclaimer-modal').classList.remove('open');
+}
+function checkDisclaimer(){
+  let ack=null; try{ ack=localStorage.getItem('payrollpro_ack_v1'); }catch(e){}
+  if(ack!=='1') openDisclaimer();
+}
+function renderBackupNotice(){
+  const el=document.getElementById('backup-notice'); if(!el) return;
+  if(!isDirty()||!employees.length){ el.innerHTML=''; return; }
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius);padding:12px 16px;margin-bottom:20px;">
+    <span style="font-size:18px;flex-shrink:0;">⚠️</span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:600;color:#92400e;">${t('notice_backup_title')}</div>
+      <div style="font-size:12px;color:#92400e;line-height:1.5;margin-top:2px;">${t('notice_backup_body')}</div>
+    </div>
+    <button class="btn btn-sm" onclick="exportData()" style="flex-shrink:0;background:#92400e;color:#fff;border:none;">${t('btn_backup_now')}</button>
+  </div>`;
+}
+
 function renderDashboard() {
   const months = lang==='ar' ? MONTHS_AR : MONTHS_EN;
   const now = new Date();
+  renderBackupNotice();
   document.getElementById('dash-date').textContent = now.toLocaleDateString(lang==='ar'?'ar-SA-u-ca-gregory-nu-latn':'en-SA-u-ca-gregory-nu-latn',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const active=employees.filter(e=>e.status==='active');
   const totalBase=active.reduce((s,e)=>s+Number(e.salary||0),0);
@@ -2714,6 +2833,7 @@ initMonthDropdowns();
 updatePayrollStatusFilter();
 applyLang();
 renderDashboard();
+checkDisclaimer();
 </script>
 </body>
 </html>
