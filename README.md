@@ -6,7 +6,7 @@
 
 A single-file, browser-based HR and payroll management system for small and medium businesses. No server, no installation — open the HTML file and start working. All data is stored locally in the browser.
 
-**▶ [Try the live demo](https://alfaisalgassim.github.io/SalaryCal/)** — no signup, nothing is uploaded; all data stays in your browser.
+**▶ [Try the live demo](https://alfaisalgassim.github.io/Payroll/)** — no signup, nothing is uploaded; all data stays in your browser.
 
 ## ⚠️ Important: Your Data
 
@@ -92,7 +92,7 @@ If your browser blocks storage entirely (common in private mode), the app will w
 
 ## Getting Started
 
-Either **[open the live demo](https://alfaisalgassim.github.io/SalaryCal/)**, or download `index.html` and open it locally — both work identically and store data only in your browser.
+Either **[open the live demo](https://alfaisalgassim.github.io/Payroll/)**, or download `index.html` and open it locally — both work identically and store data only in your browser.
 
 1. Open the app in any modern browser (Chrome, Edge, Firefox, Safari)
 2. Go to **Employees** and add your staff, or import from the Excel template
@@ -112,9 +112,16 @@ Both paid    → record is fully locked; no changes affect it
 
 OT & Commission cannot be marked paid unless base salary is already paid for that month.
 
+## Author
+
+**Alfaisal Gassim**
+
+- X: [@AlfaisalGassim](https://x.com/AlfaisalGassim)
+- GitHub: [@AlfaisalGassim](https://github.com/AlfaisalGassim)
+
 ## License
 
-Copyright © 2026 **Alfaisal Gassim**
+Copyright © 2026 **Alfaisal Gassim** — [@AlfaisalGassim](https://x.com/AlfaisalGassim)
 
 This program is free software: you can redistribute it and/or modify it under the terms of the [GNU General Public License v3.0](LICENSE) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
